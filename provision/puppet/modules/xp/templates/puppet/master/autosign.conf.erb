@@ -1,0 +1,5 @@
+# INSTALLED BY PUPPET
+# template('xp/puppet/master/autosign.conf.erb')
+<% @agents.each do |agent| -%>
+<%= agent %>
+<% end -%>

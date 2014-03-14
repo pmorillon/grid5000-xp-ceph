@@ -1,0 +1,8 @@
+---
+:backends:
+  - yaml
+:hierarchy:
+  - xp
+  - "%{clientcert}"
+:yaml:
+ :datadir: /srv/provision/hiera/db

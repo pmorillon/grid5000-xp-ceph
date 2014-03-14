@@ -1,0 +1,3 @@
+class xp::puppet {
+
+}
