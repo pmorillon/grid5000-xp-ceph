@@ -2,4 +2,4 @@ xp.conf
 .xp_cache
 provision/hiera/db
 provision/puppet/external-modules
-
+.DS_Store
