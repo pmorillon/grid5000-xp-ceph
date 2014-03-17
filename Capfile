@@ -49,6 +49,18 @@ role :ceph_nodes do
   xp.role_with_name("ceph_nodes").servers
 end
 
+
+before :start, "oar:submit"
+before :start, "kadeploy:submit"
+before :start, "provision:setup_agent"
+before :start, "provision:setup_server"
+before :start, "provision:frontend"
+before :start, "provision:nodes"
+
+task :start do
+
+end
+
 namespace :oar do
   desc "Submit OAR jobs"
   task :submit do
