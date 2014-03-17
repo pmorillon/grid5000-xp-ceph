@@ -5,8 +5,6 @@ class ceph {
   package {
     'ceph':
       ensure => installed;
-    'xfsprogs':
-      ensure => installed;
   }
 
   Apt::Source['ceph'] -> Package['ceph']

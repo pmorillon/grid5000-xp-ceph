@@ -131,7 +131,7 @@ namespace :provision do
 end
 
 namespace :vlan do
-  
+
   desc "Set nodes into vlan"
   task :set do
     vlanid = xp.job_with_name("ceph")['resources_by_type']['vlans'].first.to_i
@@ -141,7 +141,7 @@ namespace :vlan do
     vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
     vlan.submit :nodes => nodes
   end
-  
+
 end
 
 def generateHieraDatabase
@@ -154,7 +154,7 @@ def generateHieraDatabase
     file.puts xpconfig.to_yaml
   end
   classes = {
-    'classes' => %w{ xp::ceph }
+    'classes' => %w{ xp::nodes }
   }
   xp.role_with_name("ceph_nodes").servers.each do |node|
     File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
