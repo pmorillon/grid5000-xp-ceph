@@ -13,9 +13,8 @@ experiment_walltime = XP5K::Config[:walltime] || "1:00:00"
 sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 
 xp.define_job({
-  :resources  => "nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}",
+  :resources  => %{{type='kavlan'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}},
   :site       => XP5K::Config[:site] || 'rennes',
-  :properties => "ethnb=2",
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
   :name       => "ceph",
