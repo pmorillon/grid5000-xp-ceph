@@ -50,13 +50,13 @@ role :ceph_nodes do
   xp.role_with_name("ceph_nodes").servers
 end
 
-
 before :start, "oar:submit"
 before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
 before :start, "provision:frontend"
 before :start, "provision:nodes"
+before :start, "vlan:set"
 
 task :start do
 
@@ -128,6 +128,20 @@ namespace :provision do
     end
   end
 
+end
+
+namespace :vlan do
+  
+  desc "Set nodes into vlan"
+  task :set do
+    vlanid = xp.job_with_name("ceph")['resources_by_type']['vlans'].first.to_i
+    nodes = xp.role_with_name("ceph_nodes").servers.map { |node| node.gsub(/-(\d+)/, '-\1-eth2') }
+    logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
+    root = xp.connection.root.sites[XP5K::Config[:site].to_sym]
+    vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
+    vlan.submit :nodes => nodes
+  end
+  
 end
 
 def generateHieraDatabase
