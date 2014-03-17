@@ -11,6 +11,7 @@ XP5K::Config.load
 def xp; @xp; end
 experiment_walltime = XP5K::Config[:walltime] || "1:00:00"
 sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
+synced = false
 
 xp.define_job({
   :resources  => %{{type='kavlan'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}},
@@ -120,8 +121,11 @@ namespace :provision do
 
   desc "Upload modules on Puppet master"
   task :upload_modules do
-    generateHieraDatabase
-    %x{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{xp.role_with_name("frontend").servers.first}:/srv}
+    unless synced
+      generateHieraDatabase
+      %x{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{xp.role_with_name("frontend").servers.first}:/srv}
+      synced = true
+    end
   end
 
 end
