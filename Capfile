@@ -55,8 +55,8 @@ before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
 before :start, "provision:frontend"
-before :start, "provision:nodes"
 before :start, "vlan:set"
+before :start, "provision:nodes"
 
 task :start do
 
