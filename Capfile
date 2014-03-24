@@ -14,7 +14,7 @@ sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 synced = false
 
 xp.define_job({
-  :resources  => %{{type='kavlan'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}},
+  :resources  => %{{type='kavlan-local'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}},
   :site       => XP5K::Config[:site] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
