@@ -3,6 +3,7 @@
 ## vi: set ft=ruby :
 
 require "xp5k"
+require "yaml"
 
 PUPPET_VERSION = '3.4.2'
 
@@ -150,6 +151,7 @@ def generateHieraDatabase
     'frontend'   => xp.role_with_name("frontend").servers.first,
     'ceph_nodes' => xp.role_with_name("ceph_nodes").servers
   }
+  xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
     file.puts xpconfig.to_yaml
   end

@@ -1,0 +1,9 @@
+---
+filesystem: ext4
+cluster: paranoia
+node_description:
+  mon: sdb
+  osd:
+    - sdc
+    - sdd
+    - sde

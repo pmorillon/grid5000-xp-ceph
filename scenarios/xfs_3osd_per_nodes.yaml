@@ -1,0 +1,9 @@
+---
+filesystem: xfs
+cluster: paranoia
+node_description:
+  mon: sdb
+  osd:
+    - sdc
+    - sdd
+    - sde
