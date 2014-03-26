@@ -149,7 +149,8 @@ def generateHieraDatabase
   %x{rm -f provision/hiera/db/*}
   xpconfig = {
     'frontend'   => xp.role_with_name("frontend").servers.first,
-    'ceph_nodes' => xp.role_with_name("ceph_nodes").servers
+    'ceph_nodes' => xp.role_with_name("ceph_nodes").servers,
+    'vlan'       => xp.job_with_name("ceph")['resources_by_type']['vlans'].first
   }
   xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
