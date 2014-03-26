@@ -1,0 +1,38 @@
+# INSTALLED BY PUPPET
+# template('xp/ceph/ceph.conf.erb')
+
+[global]
+    auth supported = cephx
+    keyring = /etc/ceph/keyring.admin
+
+[osd]
+    osd data = /srv/ceph/osd_$id
+    osd journal = /srv/ceph/osd_$id/journal
+    osd journal size = 512
+    keyring = /etc/ceph/keyring.$name
+
+    ; working with ext4 (sileht: disable because xfs is used)
+    ;filestore xattr use omap = true
+
+    ; solve rbd data corruption (sileht: disable by default in 0.48)
+    filestore fiemap = false
+
+<% @nodes.each do |node| -%>
+  <%- @osd_devices.each_with_index do |device, index| -%>
+[osd.<%= node.split('.').first %>_<%= device %>]
+    host = <%= node.split('.').first %>
+    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>:<%= 6800 + (index*2) %>
+    public addr = <%= Resolv.getaddress(node) %>:<%= 6800 + 1 + (index*2) %>
+    devs = /dev/<%= device %>1
+  <%- end -%>
+
+<% end -%>
+
+[mon]
+    mon data = /srv/ceph/mon_$id
+<% @nodes.each do |node| -%>
+[mon.<%= node.split('.').first %>]
+    host = <%= node.split('.').first %>
+    mon addr = <%= Resolv.getaddress(node) %>:6789
+<% end -%>
+
