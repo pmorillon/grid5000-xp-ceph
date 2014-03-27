@@ -11,10 +11,11 @@
     osd journal size = 512
     keyring = /etc/ceph/keyring.$name
 
-    ; working with ext4 (sileht: disable because xfs is used)
-    ;filestore xattr use omap = true
+<% unless @fs == 'xfs' -%>
+    filestore xattr use omap = true
+<% end -%>
 
-    ; solve rbd data corruption (sileht: disable by default in 0.48)
+    ; solve rbd data corruption
     filestore fiemap = false
 
 <% @nodes.each do |node| -%>
