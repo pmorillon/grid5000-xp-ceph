@@ -18,19 +18,19 @@
     ; solve rbd data corruption
     filestore fiemap = false
 
-<% @nodes.each do |node| -%>
-  <%- @osd_devices.each_with_index do |device, index| -%>
-[osd.<%= node.split('.').first %>_<%= device %>]
+<% @nodes.each_with_index do |node, n_index| -%>
+  <%- @osd_devices.each_with_index do |device, d_index| -%>
+[osd.<%= n_index + 1 %><%= d_index + 1 %>]
     host = <%= node.split('.').first %>
-    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>:<%= 6800 + (index*2) %>
-    public addr = <%= Resolv.getaddress(node) %>:<%= 6800 + 1 + (index*2) %>
+    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>:<%= 6800 + (d_index*2) %>
+    public addr = <%= Resolv.getaddress(node) %>:<%= 6800 + 1 + (d_index*2) %>
     devs = /dev/<%= device %>1
   <%- end -%>
 
 <% end -%>
 
 [mon]
-    mon data = /srv/ceph/mon_$id
+    mon data = /srv/ceph/mon_$id/data
 <% @nodes.each do |node| -%>
 [mon.<%= node.split('.').first %>]
     host = <%= node.split('.').first %>

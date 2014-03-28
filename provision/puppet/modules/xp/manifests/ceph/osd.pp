@@ -10,8 +10,11 @@ class xp::ceph::osd {
   }
 
   $node_description = hiera_hash('node_description')
+  $nodes = hiera_array('ceph_nodes')
   $osd_devices = $node_description['osd']
   $fs = hiera('filesystem')
+
+  $node_id = get_array_id($nodes, $fqdn)
 
   xp::ceph::osd_tree {
     $osd_devices:
@@ -20,8 +23,11 @@ class xp::ceph::osd {
 
   define xp::ceph::osd_tree($fstype) {
 
+    $device_id = get_array_id($xp::ceph::osd::osd_devices, $name)
+    $id = "${xp::ceph::osd::node_id}${device_id}"
+
     file {
-      "/srv/ceph/osd_${hostname}_${name}":
+      "/srv/ceph/osd_${id}":
         tag    => 'ceph_tree',
         notify => Exec["/sbin/parted -s /dev/${name} mklabel msdos"];
     }
@@ -40,7 +46,7 @@ class xp::ceph::osd {
     }
 
     mount {
-      "/srv/ceph/osd_${hostname}_${name}":
+      "/srv/ceph/osd_${id}":
         ensure  => mounted,
         device  => "/dev/${name}1",
         fstype  => $fstype,

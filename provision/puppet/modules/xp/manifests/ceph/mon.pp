@@ -17,6 +17,9 @@ class xp::ceph::mon {
     "/srv/ceph/mon_${hostname}":
       tag    => 'ceph_tree',
       notify => Exec["/sbin/parted -s /dev/${mon_device} mklabel msdos"];
+    "/srv/ceph/mon_${hostname}/data":
+      tag     => 'ceph_tree',
+      require => Mount["/srv/ceph/mon_${hostname}"];
   }
 
   unless $mon_device == 'sda' {
