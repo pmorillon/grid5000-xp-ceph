@@ -28,13 +28,13 @@ class xp::ceph {
       group   => root,
       content => template('xp/ceph/ceph.conf.erb'),
       require => Package['ceph'];
-    '/root/.ssh/id_rsa_ceph':
+    '/root/.ssh/id_rsa':
       ensure => file,
       mode   => '0600',
       owner  => root,
       group  => root,
       source => "puppet://${puppetmaster}/xpfiles/id_rsa_ceph";
-    '/root/.ssh/id_rsa_ceph.pub':
+    '/root/.ssh/id_rsa.pub':
       ensure => file,
       mode   => '0644',
       owner  => root,
@@ -43,12 +43,12 @@ class xp::ceph {
   }
 
   exec {
-    'cat /root/.ssh/id_rsa_ceph.pub >> /root/.ssh/authorized_keys':
+    'cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys':
       path    => "/usr/bin:/usr/sbin:/bin",
       user    => root,
       group   => root,
       unless  => 'grep ceph /root/.ssh/authorized_keys',
-      require => File['/root/.ssh/id_rsa_ceph.pub'];
+      require => File['/root/.ssh/id_rsa.pub'];
   }
 
 }
