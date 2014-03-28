@@ -1,6 +1,7 @@
 class xp::puppet::master {
 
   include 'xp::apache'
+  include 'xp::ceph::keys'
 
   File <| tag == 'setup' |> {
     ensure => file,
@@ -9,8 +10,9 @@ class xp::puppet::master {
     group  => root
   }
 
-  $agents = hiera_array('ceph_nodes')
-  $version = '3.4.2-1puppetlabs1'
+  $agents       = hiera_array('ceph_nodes')
+  $version      = '3.4.2-1puppetlabs1'
+  $frontend     = hiera('frontend')
 
   package {
     ['puppetmaster-common', 'puppetmaster', 'puppetmaster-passenger']:
@@ -25,11 +27,24 @@ class xp::puppet::master {
       tag    => 'setup',
       source => 'puppet:///modules/xp/puppet/master/puppet.conf';
     '/etc/puppet/manifests/site.pp':
-      tag    => 'setup',
-      source => 'puppet:///modules/xp/puppet/master/site.pp';
+      tag     => 'setup',
+      content => template('xp/puppet/master/site.pp.erb');
     '/etc/puppet/autosign.conf':
       tag     => 'setup',
       content => template('xp/puppet/master/autosign.conf.erb');
+    '/etc/puppet/exports':
+      ensure => directory,
+      mode   => '0644',
+      owner  => root,
+      group  => root;
+    '/etc/puppet/exports/xpfiles':
+      ensure => directory,
+      mode   => '0644',
+      owner  => root,
+      group  => root;
+    '/etc/puppet/fileserver.conf':
+      tag    => setup,
+      source => 'puppet:///modules/xp/puppet/master/fileserver.conf';
   }
 
   service {

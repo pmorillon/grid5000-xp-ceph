@@ -1,4 +1,6 @@
 # INSTALLED BY PUPPET
 # puppet:///modules/xp/puppet/master/site.pp
 
+$puppetmaster = '<%= @frontend %>'
+
 hiera_include('classes')
