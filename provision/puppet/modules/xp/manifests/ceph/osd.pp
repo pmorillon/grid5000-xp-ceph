@@ -18,7 +18,8 @@ class xp::ceph::osd {
 
   xp::ceph::osd_tree {
     $osd_devices:
-      fstype => $fs;
+      fstype  => $fs,
+      require => Service['ntp'];
   }
 
   define xp::ceph::osd_tree($fstype) {
