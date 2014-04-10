@@ -1,8 +1,6 @@
 class xp::puppet::master {
 
   include 'xp::apache'
-  include 'xp::ceph::keys'
-  include 'xp::ntp'
 
   File <| tag == 'setup' |> {
     ensure => file,

@@ -2,8 +2,20 @@
 # template('xp/ceph/ceph.conf.erb')
 
 [global]
-    auth supported = cephx
-    keyring = /etc/ceph/keyring.admin
+    fsid = <%= @fsid %>
+    mon initial members = <%= @nodes.first.split('.').first %>
+    mon host = <%= Resolv.getaddress(@nodes.first) %>
+    auth cluster required = cephx
+    auth service required = cephx
+    auth client required = cephx
+    osd journal size = 1024
+    filestore xattr use omap = true
+    osd pool default size = 2
+    osd pool default min size = 1
+    osd pool default pg num = <%= (@nodes.length * @osd_devices.length * 100 / 2).round %>
+    osd pool default pgp num = <%= (@nodes.length * @osd_devices.length * 100 / 2).round %>
+    osd pool default crush rule = 1
+    osd crush chooseleaf type = 1
 
 [osd]
     osd data = /srv/ceph/osd_$id
@@ -20,10 +32,11 @@
 
 <% @nodes.each_with_index do |node, n_index| -%>
   <%- @osd_devices.each_with_index do |device, d_index| -%>
-[osd.<%= n_index + 1 %><%= d_index + 1 %>]
+[osd.<%= n_index * @osd_devices.length + d_index %>]
     host = <%= node.split('.').first %>
-    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>:<%= 6800 + (d_index*2) %>
-    public addr = <%= Resolv.getaddress(node) %>:<%= 6800 + 1 + (d_index*2) %>
+#    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>
+    public addr = <%= Resolv.getaddress(node) %>
+    osd mkfs type = <%= @fs %>
     devs = /dev/<%= device %>1
   <%- end -%>
 
@@ -35,5 +48,12 @@
 [mon.<%= node.split('.').first %>]
     host = <%= node.split('.').first %>
     mon addr = <%= Resolv.getaddress(node) %>:6789
+<% end -%>
+
+[mds]
+  mds data = /srv/ceph/mds.$id
+<% @nodes.each_with_index do |node, index| -%>
+[mds.<%= index %>]
+    host = <%= node.split('.').first %>
 <% end -%>
 

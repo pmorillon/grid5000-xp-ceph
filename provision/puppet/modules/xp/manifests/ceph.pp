@@ -1,12 +1,11 @@
 class xp::ceph {
 
   include '::ceph'
-  include 'xp::ceph::osd'
-  include 'xp::ceph::mon'
 
   $node_description = hiera_hash('node_description')
   $osd_devices = $node_description['osd']
   $fs = hiera('filesystem')
+  $fsid = hiera('ceph_fsid')
   $nodes = hiera_array('ceph_nodes')
   $vlan_id = hiera('vlan')
 

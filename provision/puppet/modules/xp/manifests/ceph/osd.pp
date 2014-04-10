@@ -1,12 +1,17 @@
 class xp::ceph::osd {
 
-  include "xp::ceph"
+  require 'xp::ceph'
 
   File <| tag == 'ceph_tree' |> {
     ensure => directory,
     mode   => '0644',
     owner  => root,
     group  => root
+  }
+
+  Exec {
+    user    => root,
+    group   => root
   }
 
   $node_description = hiera_hash('node_description')
@@ -22,10 +27,24 @@ class xp::ceph::osd {
       require => Service['ntp'];
   }
 
+  exec {
+    "Add ceph node ${hostname} to crush map":
+      command        => "/usr/bin/ceph osd crush add-bucket ${hostname} host",
+      notify         => Exec["Place ceph node ${hostname} under the root default"],
+      unless         => "/usr/bin/ceph osd crush dump | grep ${hostname}",
+      require        => Package['ceph'];
+      #      require => Xp::Ceph::Osd_tree[$osd_devices];
+    "Place ceph node ${hostname} under the root default":
+      command     => "/usr/bin/ceph osd crush move ${hostname} root=default",
+      refreshonly => true;
+  }
+
   define xp::ceph::osd_tree($fstype) {
 
-    $device_id = get_array_id($xp::ceph::osd::osd_devices, $name)
-    $id = "${xp::ceph::osd::node_id}${device_id}"
+    $devices = $xp::ceph::osd::osd_devices
+    $device_id = get_array_id($devices, $name)
+    $node_id = $xp::ceph::osd::node_id
+    $id = inline_template("<%= @node_id * @devices.length + @device_id %>")
 
     file {
       "/srv/ceph/osd_${id}":
@@ -44,7 +63,22 @@ class xp::ceph::osd {
         require     => Package['parted'];
       "/sbin/mkfs.${fstype} /dev/${name}1":
         refreshonly => true;
+      "initialize osd id ${id} data directory":
+        command => "/usr/bin/ceph-osd -i ${id} --mkfs --mkkey",
+        creates => "/etc/ceph/keyring.osd.${id}",
+        require => [File['/etc/ceph/ceph.conf'], Mount["/srv/ceph/osd_${id}"]];
+      "Register the osd ${id} authentication key":
+        command     => "/usr/bin/ceph auth add osd.${id} osd 'allow *' mon 'allow rwx' -i /etc/ceph/keyring.osd.${id}",
+        notify      => Exec["Add the osd ${id} in the crush map"],
+        refreshonly => true;
+      "Add the osd ${id} in the crush map":
+        command     => "/usr/bin/ceph osd crush add osd.${id} 1.0 host=${hostname}",
+        refreshonly => true,
+        require     => Exec["Place ceph node ${hostname} under the root default"];
     }
+
+    File["/srv/ceph/osd_${id}"] -> Exec["initialize osd id ${id} data directory"]
+    Package['ceph'] -> Exec["initialize osd id ${id} data directory"] ~> Exec["Register the osd ${id} authentication key"]
 
     mount {
       "/srv/ceph/osd_${id}":
@@ -54,6 +88,16 @@ class xp::ceph::osd {
         options => 'rw,noexec,nodev,noatime,nodiratime,barrier=0',
         require => Exec["/sbin/mkfs.${fstype} /dev/${name}1"];
     }
+
+    service {
+    "ceph-osd-${id}":
+      ensure  => running,
+      start   => "service ceph start osd.${id}",
+      stop    => "service ceph stop osd.${id}",
+      status  => "service ceph status osd.${id}",
+      require => Exec["Add the osd ${id} in the crush map"];
+  }
+
 
   }
 

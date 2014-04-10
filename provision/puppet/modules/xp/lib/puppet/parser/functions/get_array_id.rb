@@ -6,6 +6,6 @@ module Puppet::Parser::Functions
     array.each_with_index do |v,i|
       h[v] = i
     end
-    h[obj] + 1
+    h[obj]
   end
 end

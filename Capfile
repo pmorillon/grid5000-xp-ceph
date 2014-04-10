@@ -15,14 +15,26 @@ sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 synced = false
 
 xp.define_job({
-  :resources  => %{{type='kavlan-local'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3) + 1},walltime=#{experiment_walltime}},
+  :resources  => %{{type='kavlan-local'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3)},walltime=#{experiment_walltime}},
   :site       => XP5K::Config[:site] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
-  :name       => "ceph",
+  :name       => "ceph_nodes",
+  :roles      => [
+    XP5K::Role.new({ :name => 'ceph_nodes', :size => XP5K::Config[:nodes_count] || 3 }),
+  ],
+  :command    => "sleep 186400"
+})
+
+xp.define_job({
+  :resources  => %{nodes=5,walltime=#{experiment_walltime}},
+  :site       => XP5K::Config[:site] || 'rennes',
+  :queue      => 'default',
+  :types      => ["deploy"],
+  :name       => "ceph_frontend",
   :roles      => [
     XP5K::Role.new({ :name => 'frontend', :size => 1 }),
-    XP5K::Role.new({ :name => 'ceph_nodes', :size => XP5K::Config[:nodes_count] || 3 }),
+    XP5K::Role.new({ :name => 'computes', :size => 4 })
   ],
   :command    => "sleep 186400"
 })
@@ -55,8 +67,12 @@ before :start, "oar:submit"
 before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
+before :start, "provision:hiera_generate"
 before :start, "provision:frontend"
 before :start, "vlan:set"
+before :start, "provision:nodes"
+before :start, "provision:hiera_osd"
+before :start, "provision:create_osd"
 before :start, "provision:nodes"
 
 task :start do
@@ -109,13 +125,13 @@ namespace :provision do
   task :frontend, :roles => :frontend do
     set :user, "root"
     upload "provision/hiera/hiera.yaml", "/etc/puppet/hiera.yaml"
-    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules:/srv/provision/puppet/external-modules -e 'include xp::puppet::master'"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules:/srv/provision/puppet/external-modules -e 'include xp::frontend'"
   end
 
   before 'provision:nodes', 'provision:upload_modules'
 
   desc "Provision nodes"
-  task :nodes, :roles => :ceph_nodes do
+  task :nodes, :roles => :ceph_nodes, :on_error => :continue do
     set :user, "root"
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
   end
@@ -123,10 +139,39 @@ namespace :provision do
   desc "Upload modules on Puppet master"
   task :upload_modules do
     unless synced
-      generateHieraDatabase
       %x{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{xp.role_with_name("frontend").servers.first}:/srv}
       synced = true
     end
+  end
+
+  desc "Generate hiera databases"
+  task :hiera_generate do
+    generateHieraDatabase
+  end
+
+  desc "Add osd to Hiera"
+  task :hiera_osd do
+    classes = {
+      'classes' => %w{ xp::nodes xp::ceph::mon xp::ceph::osd xp::ceph::mds }
+    }
+    xp.role_with_name("ceph_nodes").servers.each do |node|
+      File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
+        file.puts classes.to_yaml
+      end
+    end
+    synced = false
+  end
+
+  before 'provision:create_osd', 'provision:upload_modules'
+
+  desc "Creates OSD"
+  task :create_osd, :roles => :ceph_nodes do
+    set :user, 'root'
+    devices = YAML.load(File.read('provision/hiera/db/xp.yaml'))["node_description"]["osd"]
+    devices.each do
+      run "ceph osd create"
+    end
+    #run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
   end
 
 end
@@ -135,7 +180,7 @@ namespace :vlan do
 
   desc "Set nodes into vlan"
   task :set do
-    vlanid = xp.job_with_name("ceph")['resources_by_type']['vlans'].first.to_i
+    vlanid = xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first.to_i
     nodes = xp.role_with_name("ceph_nodes").servers.map { |node| node.gsub(/-(\d+)/, '-\1-eth2') }
     logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
     root = xp.connection.root.sites[XP5K::Config[:site].to_sym]
@@ -150,14 +195,15 @@ def generateHieraDatabase
   xpconfig = {
     'frontend'   => xp.role_with_name("frontend").servers.first,
     'ceph_nodes' => xp.role_with_name("ceph_nodes").servers,
-    'vlan'       => xp.job_with_name("ceph")['resources_by_type']['vlans'].first
+    'vlan'       => xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first,
+    'ceph_fsid'  => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
   }
   xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
     file.puts xpconfig.to_yaml
   end
   classes = {
-    'classes' => %w{ xp::nodes }
+    'classes' => %w{ xp::nodes xp::ceph::mon }
   }
   xp.role_with_name("ceph_nodes").servers.each do |node|
     File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
@@ -165,4 +211,6 @@ def generateHieraDatabase
     end
   end
 end
+
+
 
