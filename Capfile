@@ -5,17 +5,40 @@
 require "xp5k"
 require "yaml"
 
-PUPPET_VERSION = '3.4.2'
 
+# Load ./xp.conf file
+#
 XP5K::Config.load
+
+
+# Initialize experiment
+#
 @xp = XP5K::XP.new(:logger => logger)
 def xp; @xp; end
-experiment_walltime = XP5K::Config[:walltime] || "1:00:00"
+
+
+# Constants
+#
+PUPPET_VERSION = '3.4.2'
+SSH_CMD = "ssh -o ConnectTimeout=10 -F #{XP5K::Config[:ssh_config] || '~/.ssh/config'}"
+
+
+# Defaults configuration
+#
+XP5K::Config[:scenario] ||= 'ext4_4osd_per_nodes.yaml'
+XP5K::Config[:walltime] ||= '1:00:00'
+
+
+# Define vars used for file synchronization between local repo and the puppet master
+#
 sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 synced = false
 
+
+# Define a OAR job for nodes of the ceph cluster
+
 xp.define_job({
-  :resources  => %{{type='kavlan-local'}/vlan=1,{ethnb=2}/nodes=#{(XP5K::Config[:nodes_count] || 3)},walltime=#{experiment_walltime}},
+  :resources  => %{{type='kavlan-local'}/vlan=1,{cluster='paranoia'}/nodes=#{(XP5K::Config[:nodes_count] || 3)},walltime=#{XP5K::Config[:walltime]}},
   :site       => XP5K::Config[:site] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
@@ -26,33 +49,42 @@ xp.define_job({
   :command    => "sleep 186400"
 })
 
+
+# Define a OAR job for the frontend (puppetmaster) and computes nodes
+#
 xp.define_job({
-  :resources  => %{nodes=5,walltime=#{experiment_walltime}},
+  :resources  => %{nodes=2,walltime=#{XP5K::Config[:walltime]}},
   :site       => XP5K::Config[:site] || 'rennes',
   :queue      => 'default',
   :types      => ["deploy"],
   :name       => "ceph_frontend",
   :roles      => [
     XP5K::Role.new({ :name => 'frontend', :size => 1 }),
-    XP5K::Role.new({ :name => 'computes', :size => 4 })
+    XP5K::Role.new({ :name => 'computes', :size => 1 })
   ],
   :command    => "sleep 186400"
 })
 
+
+# Define deployment on all nodes
+#
 xp.define_deployment({
   :site           => XP5K::Config[:site],
   :environment    => "wheezy-x64-base",
-  :roles          => %w{ frontend ceph_nodes },
+  :roles          => %w{ frontend ceph_nodes computes },
   :key            => File.read(XP5K::Config[:public_key]),
   :notifications  => ["xmpp:#{XP5K::Config[:user]}@jabber.grid5000.fr"]
 })
 
 
-SSH_CMD = "ssh -o ConnectTimeout=10 -F #{XP5K::Config[:ssh_config] || '~/.ssh/config'}"
-
+# Configure SSH for capistrano
+#
 set :gateway, XP5K::Config[:gateway] if XP5K::Config[:gateway]
 set :ssh_config, XP5K::Config[:ssh_config] if XP5K::Config[:ssh_config]
 
+
+# Define roles
+#
 role :g5kfrontend, "frontend.#{XP5K::Config[:site]}.grid5000.fr"
 
 role :frontend do
@@ -63,6 +95,9 @@ role :ceph_nodes do
   xp.role_with_name("ceph_nodes").servers
 end
 
+
+# Define the workflow
+#
 before :start, "oar:submit"
 before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
@@ -75,10 +110,15 @@ before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
 before :start, "provision:nodes"
 
-task :start do
 
+# Empty task for the `start` workflow
+#
+task :start do
 end
 
+
+# Tasks for OAR job management
+#
 namespace :oar do
   desc "Submit OAR jobs"
   task :submit do
@@ -97,6 +137,9 @@ namespace :oar do
   end
 end
 
+
+# Tasks for deployments management
+#
 namespace :kadeploy do
   desc "Submit kadeploy deployments"
   task :submit do
@@ -104,6 +147,9 @@ namespace :kadeploy do
   end
 end
 
+
+# Tasks for Puppet provisioning
+#
 namespace :provision do
   desc "Install puppet agent"
   task :setup_agent, :roles => [:frontend, :ceph_nodes] do
@@ -176,6 +222,9 @@ namespace :provision do
 
 end
 
+
+# Tasks for Vlan management
+#
 namespace :vlan do
 
   desc "Set nodes into vlan"
@@ -190,6 +239,9 @@ namespace :vlan do
 
 end
 
+
+# Manage the Hiera database
+#
 def generateHieraDatabase
   %x{rm -f provision/hiera/db/*}
   xpconfig = {
