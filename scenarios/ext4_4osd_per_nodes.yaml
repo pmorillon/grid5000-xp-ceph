@@ -1,6 +1,9 @@
 ---
 filesystem: ext4
+site: rennes
 cluster: paranoia
+ceph_nodes_count: 8
+cluster_network_interface: eth2
 node_description:
   mon: sda
   osd:

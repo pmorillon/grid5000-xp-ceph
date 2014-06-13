@@ -8,6 +8,7 @@ class xp::ceph {
   $fsid = hiera('ceph_fsid')
   $nodes = hiera_array('ceph_nodes')
   $vlan_id = hiera('vlan')
+  $cluster_network_interface = hiera('cluster_network_interface')
 
   package {
     ['xfsprogs', 'parted']:

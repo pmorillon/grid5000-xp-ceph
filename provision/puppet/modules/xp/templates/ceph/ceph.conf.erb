@@ -34,7 +34,9 @@
   <%- @osd_devices.each_with_index do |device, d_index| -%>
 [osd.<%= n_index * @osd_devices.length + d_index %>]
     host = <%= node.split('.').first %>
-#    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-eth2-kavlan-' + vlan_id))%>
+    <%- if @cluster_network_interface -%>
+    cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-' + @cluster_network_interface + '-kavlan-' + vlan_id))%>
+    <%- end -%>
     public addr = <%= Resolv.getaddress(node) %>
     osd mkfs type = <%= @fs %>
     devs = /dev/<%= device %>1
