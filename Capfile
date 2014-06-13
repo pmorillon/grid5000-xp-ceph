@@ -34,17 +34,22 @@ XP5K::Config[:walltime] ||= '1:00:00'
 sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 synced = false
 
+# Load scenario
+#
+@scenario = YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml"))
+def scenario; @scenario; end
+
 
 # Define a OAR job for nodes of the ceph cluster
-
+#
 xp.define_job({
-  :resources  => %{{type='kavlan-local'}/vlan=1,{cluster='paranoia'}/nodes=#{(XP5K::Config[:nodes_count] || 3)},walltime=#{XP5K::Config[:walltime]}},
-  :site       => XP5K::Config[:site] || 'rennes',
+  :resources  => %{{type='kavlan-local'}/vlan=1,{cluster='#{scenario['cluster']}'}/nodes=#{scenario['ceph_nodes_count']},walltime=#{XP5K::Config[:walltime]}},
+  :site       => XP5K::Config[:site] || scenario[:site] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
   :name       => "ceph_nodes",
   :roles      => [
-    XP5K::Role.new({ :name => 'ceph_nodes', :size => XP5K::Config[:nodes_count] || 3 }),
+    XP5K::Role.new({ :name => 'ceph_nodes', :size => scenario['ceph_nodes_count'] }),
   ],
   :command    => "sleep 186400"
 })
@@ -54,7 +59,7 @@ xp.define_job({
 #
 xp.define_job({
   :resources  => %{nodes=2,walltime=#{XP5K::Config[:walltime]}},
-  :site       => XP5K::Config[:site] || 'rennes',
+  :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
   :queue      => 'default',
   :types      => ["deploy"],
   :name       => "ceph_frontend",
@@ -69,7 +74,7 @@ xp.define_job({
 # Define deployment on all nodes
 #
 xp.define_deployment({
-  :site           => XP5K::Config[:site],
+  :site           => scenario['site'],
   :environment    => "wheezy-x64-base",
   :roles          => %w{ frontend ceph_nodes computes },
   :key            => File.read(XP5K::Config[:public_key]),
@@ -232,7 +237,7 @@ namespace :vlan do
     vlanid = xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first.to_i
     nodes = xp.role_with_name("ceph_nodes").servers.map { |node| node.gsub(/-(\d+)/, '-\1-eth2') }
     logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
-    root = xp.connection.root.sites[XP5K::Config[:site].to_sym]
+    root = xp.connection.root.sites[scenario['site'].to_sym]
     vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
     vlan.submit :nodes => nodes
   end
