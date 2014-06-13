@@ -1,6 +1,9 @@
 class xp::ceph {
 
-  include '::ceph'
+  class {
+    '::ceph':
+      version => 'firefly';
+  }
 
   $node_description = hiera_hash('node_description')
   $osd_devices = $node_description['osd']

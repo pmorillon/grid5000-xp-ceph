@@ -1,6 +1,11 @@
-class ceph {
+class ceph (
+  $version = 'emperor'
+) {
 
-  include 'ceph::apt'
+  class {
+    'ceph::apt':
+      version => $version;
+  }
 
   package {
     'ceph':
