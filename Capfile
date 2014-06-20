@@ -34,6 +34,7 @@ XP5K::Config[:walltime] ||= '1:00:00'
 sync_path = File.expand_path(File.join(Dir.pwd, 'provision'))
 synced = false
 
+
 # Load scenario
 #
 @scenario = YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml"))
@@ -64,7 +65,7 @@ xp.define_job({
   :types      => ["deploy"],
   :name       => "ceph_frontend",
   :roles      => [
-    XP5K::Role.new({ :name => 'frontend', :size => 1 }),
+    XP5K::Role.new({ :name => 'frontend', :size => 1 }),  # For the puppet master
     XP5K::Role.new({ :name => 'computes', :size => 1 })
   ],
   :command    => "sleep 186400"
