@@ -91,8 +91,6 @@ set :ssh_config, XP5K::Config[:ssh_config] if XP5K::Config[:ssh_config]
 
 # Define roles
 #
-role :g5kfrontend, "frontend.#{XP5K::Config[:site]}.grid5000.fr"
-
 role :frontend do
   xp.role_with_name("frontend").servers
 end
@@ -104,7 +102,7 @@ end
 
 # Define the workflow
 #
-#before :start, "oar:submit"
+before :start, "oar:submit"
 before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
