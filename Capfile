@@ -104,7 +104,7 @@ end
 
 # Define the workflow
 #
-before :start, "oar:submit"
+#before :start, "oar:submit"
 before :start, "kadeploy:submit"
 before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
@@ -177,7 +177,7 @@ namespace :provision do
   task :frontend, :roles => :frontend do
     set :user, "root"
     upload "provision/hiera/hiera.yaml", "/etc/puppet/hiera.yaml"
-    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules:/srv/provision/puppet/external-modules -e 'include xp::frontend'"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules -e 'include xp::frontend'"
   end
 
   before 'provision:nodes', 'provision:upload_modules'

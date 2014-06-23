@@ -12,6 +12,6 @@ class ceph (
       ensure => installed;
   }
 
-  Apt::Source['ceph'] -> Package['ceph']
+  Class['ceph::apt'] -> Package['ceph']
 
 }
