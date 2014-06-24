@@ -40,7 +40,15 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 	# Choose a scenario (see ./scenarios directory)
 	scenario        'ext4_4osd_per_nodes'
 
+### Configure ssh config file
+
+[https://www.grid5000.fr/mediawiki/index.php/Xp5k#SSH](https://www.grid5000.fr/mediawiki/index.php/Xp5k#SSH)
+
 ## Usage
 
 	$ bundle exec cap start
 	$ bundle exec cap provision:nodes
+
+To stop the experiment
+
+	$ bundle exec cap oar:clean
