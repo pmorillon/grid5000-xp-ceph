@@ -46,7 +46,7 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 	ssh_config      File.expand_path '~/.ssh/config'
 
 	# Choose a scenario (see ./scenarios directory)
-	scenario        'ext4_4osd_per_nodes'
+	scenario        'paranoia_4nodes_16osds_ext4'
 
 
 ### For external usage
@@ -84,7 +84,7 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 	ssh_config      File.expand_path '~/.ssh/config_xp5k'
 
 	# Choose a scenario (see ./scenarios directory)
-	scenario        'ext4_4osd_per_nodes'
+	scenario        'paranoia_4nodes_16osds_ext4'
 
 
 #### Configure ssh config file

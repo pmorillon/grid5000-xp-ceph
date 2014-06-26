@@ -25,7 +25,7 @@ SSH_CMD = "ssh -o ConnectTimeout=10 -F #{XP5K::Config[:ssh_config] || '~/.ssh/co
 
 # Defaults configuration
 #
-XP5K::Config[:scenario] ||= 'ext4_4osd_per_nodes.yaml'
+XP5K::Config[:scenario] ||= 'paranoia_4nodes_16osds_ext4'
 XP5K::Config[:walltime] ||= '1:00:00'
 
 

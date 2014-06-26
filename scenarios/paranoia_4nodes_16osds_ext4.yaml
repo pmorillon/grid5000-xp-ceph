@@ -1,0 +1,13 @@
+---
+filesystem: ext4
+site: rennes
+cluster: paranoia
+ceph_nodes_count: 4
+cluster_network_interface: false
+node_description:
+  mon: sda
+  osd:
+    - sdb
+    - sdc
+    - sdd
+    - sde
