@@ -255,6 +255,7 @@ def generateHieraDatabase
     'ceph_fsid'  => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
   }
   xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
+  FileUtils.mkdir('provision/hiera/db') if not Dir.exists?('provision/hiera/db')
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
     file.puts xpconfig.to_yaml
   end
