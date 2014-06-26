@@ -227,6 +227,23 @@ namespace :provision do
 end
 
 
+# Tasks for open a shell on nodes
+#
+namespace :ssh do
+
+  desc "ssh on the first ceph node"
+  task :ceph do
+    fork_exec('ssh', '-F', XP5K::Config[:ssh_config], 'root@' + xp.role_with_name('ceph_nodes').servers.first)
+  end
+
+  desc "ssh on the frontend (puppetmaster)"
+  task :frontend do
+    fork_exec('ssh', '-F', XP5K::Config[:ssh_config], 'root@' + xp.role_with_name('frontend').servers.first)
+  end
+
+end
+
+
 # Tasks for Vlan management
 #
 namespace :vlan do
@@ -270,4 +287,12 @@ def generateHieraDatabase
 end
 
 
+# Fork the execution of a command. Used to execute ssh on deployed nodes.
+#
+def fork_exec(command, *args)
+  pid = fork do
+    Kernel.exec(command, *args)
+  end
+  Process.wait(pid)
+end
 
