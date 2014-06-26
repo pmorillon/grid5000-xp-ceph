@@ -10,7 +10,7 @@ The goal of this experiment is to benchmark a Ceph cluster on Grid'5000 and comp
 
 #### Clone the repository
 
-You can work from your workstation without to connect onto a Grid'5000 frontend.
+From a Grid'5000 frontend, here `frontend.rennes.grid5000.fr`.
 
 	$ git clone git@github.com:pmorillon/grid5000-xp-ceph.git
 	$ cd grid5000-xp-ceph
