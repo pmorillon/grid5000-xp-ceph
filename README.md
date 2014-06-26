@@ -93,13 +93,38 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 
 ## Usage
 
-Start the experiment :
+### Define a scenario
+
+Here we use the default scenario described in the file `scenarios/paranoia_4nodes_16osds_ext4.yaml`.
+
+	---
+	filesystem: ext4
+	site: rennes
+	cluster: paranoia
+	ceph_nodes_count: 4
+	cluster_network_interface: false
+	node_description:
+	  mon: sda
+	  osd:
+	    - sdb
+	    - sdc
+	    - sdd
+	    - sde
+
+* `filesystem:` ext4 | xfs
+* `site:` one of the Grid'5000 sites
+* `cluster:` cluster name (we choose here the cluster _paranoia_ who have 5 disks per nodes)
+* `ceph_nodes_count:` number of nodes used for the Ceph cluster (8 max whith this cluster)
+* `cluster_network_interface:` false | ethx (on this cluster we can use eth2, this will create a private network in a local vlan and configure OSDs with the proper _cluster addr_ attribute)
+* `node_description:` descibe where are placed MONs and OSDs. Here MON is on the first disk whit the system, and we attributes one OSDs on each others disks.
+
+### Start the experiment
 
 	$ cap start
 	$ cap provision:nodes
 
 	
-Open a shell on the first node of the Ceph cluster :
+### Open a shell on the first node of the Ceph cluster
 
 	$ cap ssh:ceph
 	...
@@ -127,10 +152,33 @@ Open a shell on the first node of the Ceph cluster :
             11388 MB used, 8344 GB / 8802 GB avail
                 1152 active+clean
 
-
+	root@paranoia-2:~# ceph osd tree
+	# id	weight	type name	up/down	reweight
+	-1	16	root default
+	-3	4		host paranoia-4
+	10	1			osd.10	up	1	
+	11	1			osd.11	up	1
+	8	1			osd.8	up	1	
+	9	1			osd.9	up	1	
+	-4	4		host paranoia-3
+	4	1			osd.4	up	1	
+	7	1			osd.7	up	1	
+	6	1			osd.6	up	1	
+	5	1			osd.5	up	1	
+	-2	4		host paranoia-2
+	3	1			osd.3	up	1	
+	0	1			osd.0	up	1	
+	2	1			osd.2	up	1	
+	1	1			osd.1	up	1	
+	-5	4		host paranoia-5
+	12	1			osd.12	up	1	
+	14	1			osd.14	up	1	
+	15	1			osd.15	up	1	
+	13	1			osd.13	up	1	
 	
 
-Open a shell on the frontend (puppetmaster) :
+
+### Open a shell on the frontend (puppetmaster)
 
 	$ cap ssh:frontend
 	...
@@ -141,6 +189,6 @@ Open a shell on the frontend (puppetmaster) :
 	+ "paranoia-5.rennes.grid5000.fr"   (SHA256) F0:B5:04:45:8F:CE:EB:66:B5:4F:05:71:AD:14:48:79:21:A2:BC:BF:F2:F2:F9:78:38:AF:03:A8:8B:3A:8C:1E
 	+ "parapluie-25.rennes.grid5000.fr" (SHA256) C9:BE:42:5A:C7:E4:51:89:90:0B:E1:A6:8C:0B:BC:5D:0D:22:64:CE:FF:73:CB:50:3E:3C:E5:42:02:D4:DC:85 (alt names: "DNS:parapluie-25.rennes.grid5000.fr", "DNS:puppet", "DNS:puppet.rennes.grid5000.fr")
 
-To stop the experiment :
+### Stop the experiment
 
 	$ cap oar:clean
