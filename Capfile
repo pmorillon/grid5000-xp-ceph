@@ -25,8 +25,10 @@ SSH_CMD = "ssh -o ConnectTimeout=10 -F #{XP5K::Config[:ssh_config] || '~/.ssh/co
 
 # Defaults configuration
 #
-XP5K::Config[:scenario] ||= 'paranoia_4nodes_16osds_ext4'
-XP5K::Config[:walltime] ||= '1:00:00'
+XP5K::Config[:scenario]   ||= 'paranoia_4nodes_16osds_ext4'
+XP5K::Config[:walltime]   ||= '1:00:00'
+XP5K::Config[:ssh_config] ||= File.expand_path '~/.ssh/config'
+XP5K::Config[:user]       ||= ENV['USER']
 
 
 # Define vars used for file synchronization between local repo and the puppet master
