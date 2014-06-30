@@ -1,7 +1,7 @@
 GEM
   remote: http://rubygems.org/
   specs:
-    addressable (2.3.5)
+    addressable (2.3.6)
     backports (3.6.0)
     bond (0.4.3)
     capistrano (2.13.5)
@@ -16,7 +16,7 @@ GEM
     highline (1.6.21)
     json (1.8.1)
     json_pure (1.8.1)
-    mime-types (2.1)
+    mime-types (2.3)
     net-scp (1.1.2)
       net-ssh (>= 2.6.5)
     net-sftp (2.1.2)
@@ -37,8 +37,7 @@ GEM
     rest-client-components (1.2.0)
       rack (>= 1.0.1)
       rest-client (>= 1.6.0, < 1.7.0)
-      rest-client (>= 1.6.0, < 1.7.0)
-    restfully (1.0.7)
+    restfully (1.0.8)
       addressable
       backports
       json (~> 1.5)
@@ -64,8 +63,8 @@ GEM
       ripl (>= 0.2.8)
     term-ansicolor (1.3.0)
       tins (~> 1.0)
-    tins (1.0.0)
-    xp5k (0.0.5)
+    tins (1.3.0)
+    xp5k (0.0.6)
       json (>= 1.5.1)
       restfully (> 1.0.0)
       term-ansicolor (>= 1.0.7)
@@ -76,4 +75,4 @@ PLATFORMS
 DEPENDENCIES
   capistrano (~> 2.13.0)
   puppet (~> 3.4.0)
-  xp5k (= 0.0.5)
+  xp5k (= 0.0.6)

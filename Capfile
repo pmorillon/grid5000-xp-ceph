@@ -129,6 +129,7 @@ namespace :oar do
   desc "Submit OAR jobs"
   task :submit do
     xp.submit
+    xp.wait_for_jobs
   end
 
   desc "Clean all running OAR jobs"
