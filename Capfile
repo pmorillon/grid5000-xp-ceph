@@ -26,7 +26,7 @@ XP5K::Config[:user]       ||= ENV['USER']
 # Constants
 #
 PUPPET_VERSION = '3.4.2'
-SSH_CONFIGFILE_OPT = XP5K::Config[:ssh_config].nil? ? "" : " -F" + XP5K::Config[:ssh_config]
+SSH_CONFIGFILE_OPT = XP5K::Config[:ssh_config].nil? ? "" : " -F " + XP5K::Config[:ssh_config]
 SSH_CMD = "ssh -o ConnectTimeout=10" + SSH_CONFIGFILE_OPT
 
 
@@ -239,12 +239,12 @@ namespace :ssh do
 
   desc "ssh on the first ceph node"
   task :ceph do
-    fork_exec('ssh', SSH_CONFIGFILE_OPT, 'root@' + xp.role_with_name('ceph_nodes').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + xp.role_with_name('ceph_nodes').servers.first)
   end
 
   desc "ssh on the frontend (puppetmaster)"
   task :frontend do
-    fork_exec('ssh', SSH_CONFIGFILE_OPT, 'root@' + xp.role_with_name('frontend').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + xp.role_with_name('frontend').servers.first)
   end
 
 end
@@ -298,6 +298,7 @@ end
 def fork_exec(command, *args)
   # Remove empty args
   args.select! { |arg| arg != "" }
+  args.flatten!
   pid = fork do
     Kernel.exec(command, *args)
   end
