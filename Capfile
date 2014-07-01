@@ -17,18 +17,17 @@ XP5K::Config.load
 def xp; @xp; end
 
 
-# Constants
-#
-PUPPET_VERSION = '3.4.2'
-SSH_CMD = "ssh -o ConnectTimeout=10 -F #{XP5K::Config[:ssh_config] || '~/.ssh/config'}"
-
-
 # Defaults configuration
 #
 XP5K::Config[:scenario]   ||= 'paranoia_4nodes_16osds_ext4'
 XP5K::Config[:walltime]   ||= '1:00:00'
-XP5K::Config[:ssh_config] ||= File.expand_path '~/.ssh/config'
 XP5K::Config[:user]       ||= ENV['USER']
+
+# Constants
+#
+PUPPET_VERSION = '3.4.2'
+SSH_CONFIGFILE_OPT = XP5K::Config[:ssh_config].nil? ? "" : " -F" + XP5K::Config[:ssh_config]
+SSH_CMD = "ssh -o ConnectTimeout=10" + SSH_CONFIGFILE_OPT
 
 
 # Define vars used for file synchronization between local repo and the puppet master
@@ -236,12 +235,12 @@ namespace :ssh do
 
   desc "ssh on the first ceph node"
   task :ceph do
-    fork_exec('ssh', '-F', XP5K::Config[:ssh_config], 'root@' + xp.role_with_name('ceph_nodes').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT, 'root@' + xp.role_with_name('ceph_nodes').servers.first)
   end
 
   desc "ssh on the frontend (puppetmaster)"
   task :frontend do
-    fork_exec('ssh', '-F', XP5K::Config[:ssh_config], 'root@' + xp.role_with_name('frontend').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT, 'root@' + xp.role_with_name('frontend').servers.first)
   end
 
 end
@@ -293,6 +292,8 @@ end
 # Fork the execution of a command. Used to execute ssh on deployed nodes.
 #
 def fork_exec(command, *args)
+  # Remove empty args
+  args.select! { |arg| arg != "" }
   pid = fork do
     Kernel.exec(command, *args)
   end
