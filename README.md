@@ -188,3 +188,10 @@ Here we use the default scenario described in the file `scenarios/paranoia_4node
 ### Stop the experiment
 
 	$ cap oar:clean
+	
+### Use reservation mode to start the experiment later
+
+Edit `./xp.conf` file and add the `reservation` option :
+
+	walltime        '5:00:00'
+	reservation     '2014-07-01 13:00:00'

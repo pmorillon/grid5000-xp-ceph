@@ -44,7 +44,7 @@ def scenario; @scenario; end
 
 # Define a OAR job for nodes of the ceph cluster
 #
-xp.define_job({
+job_description = {
   :resources  => %{{type='kavlan-local'}/vlan=1,{cluster='#{scenario['cluster']}'}/nodes=#{scenario['ceph_nodes_count']},walltime=#{XP5K::Config[:walltime]}},
   :site       => XP5K::Config[:site] || scenario[:site] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
@@ -54,12 +54,14 @@ xp.define_job({
     XP5K::Role.new({ :name => 'ceph_nodes', :size => scenario['ceph_nodes_count'] }),
   ],
   :command    => "sleep 186400"
-})
+}
+job_description[:reservation] = XP5K::Config[:reservation] if not XP5K::Config[:reservation].nil?
+xp.define_job(job_description)
 
 
 # Define a OAR job for the frontend (puppetmaster) and computes nodes
 #
-xp.define_job({
+job_description = {
   :resources  => %{nodes=2,walltime=#{XP5K::Config[:walltime]}},
   :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
   :queue      => 'default',
@@ -70,7 +72,9 @@ xp.define_job({
     XP5K::Role.new({ :name => 'computes', :size => 1 })
   ],
   :command    => "sleep 186400"
-})
+}
+job_description[:reservation] = XP5K::Config[:reservation] if not XP5K::Config[:reservation].nil?
+xp.define_job(job_description)
 
 
 # Define deployment on all nodes
