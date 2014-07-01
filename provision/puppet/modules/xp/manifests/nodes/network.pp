@@ -1,26 +1,32 @@
 class xp::nodes::network {
 
-  augeas {
-    'eth2':
-      context => '/files/etc/network/interfaces',
-      changes => [
-        "set iface[. = 'eth2'] eth2",
-        "set iface[. = 'eth2']/family inet",
-        "set iface[. = 'eth2']/method dhcp"
-      ]
-  }
+  $interface = hiera('cluster_network_interface')
 
-  exec {
-    '/sbin/ifup eth2':
-      refreshonly => true;
-  }
+  if $interface {
 
-  file {
-    '/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name':
-      ensure => absent;
-  }
+    augeas {
+      $interface:
+        context => '/files/etc/network/interfaces',
+        changes => [
+          "set iface[. = '${interface}'] ${interface}",
+          "set iface[. = '${interface}']/family inet",
+          "set iface[. = '${interface}']/method dhcp"
+        ]
+    }
 
-  File['/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name'] -> Augeas['eth2']
-  Augeas['eth2'] ~> Exec['/sbin/ifup eth2']
+    exec {
+      "/sbin/ifup ${interface}":
+        refreshonly => true;
+    }
+
+    file {
+      '/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name':
+        ensure => absent;
+    }
+
+    File['/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name'] -> Augeas['eth2']
+    Augeas[$interface] ~> Exec["/sbin/ifup ${interface}"]
+
+  }
 
 }
