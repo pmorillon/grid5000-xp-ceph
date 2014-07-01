@@ -37,13 +37,9 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 
 	# OAR jobs defaults
 	walltime        '2:00:00'
-
-	# Your Grid'5000 login
-	user            'mylogin'
 		
 	# SSH configuration
 	public_key      File.expand_path '~/.ssh/id_rsa.pub'
-	ssh_config      File.expand_path '~/.ssh/config'
 
 	# Choose a scenario (see ./scenarios directory)
 	scenario        'paranoia_4nodes_16osds_ext4'
@@ -116,7 +112,7 @@ Here we use the default scenario described in the file `scenarios/paranoia_4node
 * `cluster:` cluster name (we choose here the cluster _paranoia_ who have 5 disks per nodes)
 * `ceph_nodes_count:` number of nodes used for the Ceph cluster (8 max whith this cluster)
 * `cluster_network_interface:` false | ethx (on this cluster we can use eth2, this will create a private network in a local vlan and configure OSDs with the proper _cluster addr_ attribute)
-* `node_description:` descibe where are placed MONs and OSDs. Here MON is on the first disk whit the system, and we attributes one OSDs on each others disks.
+* `node_description:` descibe where are placed MONs and OSDs. Here MON is on the first disk with the system, and we use one OSD on each others disks.
 
 ### Start the experiment
 
