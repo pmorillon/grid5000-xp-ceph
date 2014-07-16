@@ -165,7 +165,7 @@ namespace :provision do
   task :setup_agent, :roles => [:frontend, :ceph_nodes] do
     set :user, "root"
     run 'apt-get update && apt-get -y install curl wget'
-    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 wget -O /tmp/puppet_install.sh https://raw.github.com/pmorillon/puppet-puppet/0.0.3/extras/scripts/puppet_install.sh"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 wget -O /tmp/puppet_install.sh https://raw.githubusercontent.com/pmorillon/puppet-puppet/master/extras/bootstrap/puppet_install.sh"
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 PUPPET_VERSION=#{PUPPET_VERSION} sh /tmp/puppet_install.sh"
   end
 
