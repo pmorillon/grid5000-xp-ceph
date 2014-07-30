@@ -52,6 +52,7 @@ job_description = {
   :name       => "ceph_nodes",
   :roles      => [
     XP5K::Role.new({ :name => 'ceph_nodes', :size => scenario['ceph_nodes_count'] }),
+    XP5K::Role.new({ :name => 'ceph_monitor', :size => 1, :inner => 'ceph_nodes'})
   ],
   :command    => "sleep 186400"
 }
@@ -102,6 +103,10 @@ end
 
 role :ceph_nodes do
   xp.role_with_name("ceph_nodes").servers
+end
+
+role :ceph_monitor do
+  xp.role_with_name("ceph_monitor").servers
 end
 
 
@@ -207,13 +212,13 @@ namespace :provision do
 
   desc "Add osd to Hiera"
   task :hiera_osd do
-    classes = {
-      'classes' => %w{ xp::nodes xp::ceph::mon xp::ceph::osd xp::ceph::mds }
-    }
     xp.role_with_name("ceph_nodes").servers.each do |node|
       File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-        file.puts classes.to_yaml
+        file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon } }.to_yaml)
       end
+    end
+    File.open("provision/hiera/db/#{xp.role_with_name("ceph_monitor").servers.first}.yaml", "w") do |file|
+      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon xp::ceph::mds } }.to_yaml)
     end
     synced = false
   end
@@ -221,13 +226,15 @@ namespace :provision do
   before 'provision:create_osd', 'provision:upload_modules'
 
   desc "Creates OSD"
-  task :create_osd, :roles => :ceph_nodes do
+  task :create_osd, :roles => :ceph_monitor do
     set :user, 'root'
-    devices = YAML.load(File.read('provision/hiera/db/xp.yaml'))["node_description"]["osd"]
-    devices.each do
-      run "ceph osd create"
+    hiera = YAML.load(File.read('provision/hiera/db/xp.yaml'))
+    nodes = hiera["ceph_nodes"]
+    devices = hiera["node_description"]["osd"]
+    cmd = Array.new(devices.length) { |i| "ceph osd create" }.join(" && ")
+    nodes.each do
+      run cmd
     end
-    #run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
   end
 
 end
@@ -237,9 +244,9 @@ end
 #
 namespace :ssh do
 
-  desc "ssh on the first ceph node"
+  desc "ssh on the ceph monitor node"
   task :ceph do
-    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + xp.role_with_name('ceph_nodes').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + xp.role_with_name('ceph_monitor').servers.first)
   end
 
   desc "ssh on the frontend (puppetmaster)"
@@ -270,24 +277,28 @@ end
 # Manage the Hiera database
 #
 def generateHieraDatabase
+  # Remove old databases from previous experiments
   %x{rm -f provision/hiera/db/*}
+
+  # Add experiment configuration into Hiera
   xpconfig = {
-    'frontend'   => xp.role_with_name("frontend").servers.first,
-    'ceph_nodes' => xp.role_with_name("ceph_nodes").servers,
-    'vlan'       => xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first,
-    'ceph_fsid'  => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
+    'frontend'     => xp.role_with_name("frontend").servers.first,
+    'ceph_nodes'   => xp.role_with_name("ceph_nodes").servers,
+    'ceph_monitor' => xp.role_with_name("ceph_monitor").servers.first,
+    'ceph_mds'     => xp.role_with_name("ceph_monitor").servers.first,
+    'vlan'         => xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first,
+    'ceph_fsid'    => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
   }
   xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
   FileUtils.mkdir('provision/hiera/db') if not Dir.exists?('provision/hiera/db')
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
     file.puts xpconfig.to_yaml
   end
-  classes = {
-    'classes' => %w{ xp::nodes xp::ceph::mon }
-  }
+
+  # Configure Puppet classes to apply on each nodes
   xp.role_with_name("ceph_nodes").servers.each do |node|
     File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-      file.puts classes.to_yaml
+      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon } }.to_yaml)
     end
   end
 end

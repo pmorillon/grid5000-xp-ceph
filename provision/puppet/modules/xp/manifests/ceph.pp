@@ -11,6 +11,8 @@ class xp::ceph {
   $fs = hiera('filesystem')
   $fsid = hiera('ceph_fsid')
   $nodes = hiera_array('ceph_nodes')
+  $monitor = hiera('ceph_monitor')
+  $mds = hiera('ceph_mds')
   $vlan_id = hiera('vlan')
   $cluster_network_interface = hiera('cluster_network_interface')
 

@@ -3,7 +3,7 @@
 
 [global]
     fsid = <%= @fsid %>
-    mon initial members = <%= @nodes.first.split('.').first %>
+    mon initial members = <%= @monitor %>
     mon host = <%= Resolv.getaddress(@nodes.first) %>
     auth cluster required = cephx
     auth service required = cephx
@@ -54,8 +54,6 @@
 
 [mds]
   mds data = /srv/ceph/mds.$id
-<% @nodes.each_with_index do |node, index| -%>
-[mds.<%= index %>]
-    host = <%= node.split('.').first %>
-<% end -%>
+[mds.0]
+  host = <%= @mds.split('.').first %>
 
