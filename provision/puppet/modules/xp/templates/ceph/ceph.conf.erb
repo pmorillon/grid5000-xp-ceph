@@ -3,7 +3,7 @@
 
 [global]
     fsid = <%= @fsid %>
-    mon initial members = <%= @monitor %>
+    mon initial members = <%= @monitor.split('.').first %>
     mon host = <%= Resolv.getaddress(@nodes.first) %>
     auth cluster required = cephx
     auth service required = cephx
