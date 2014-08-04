@@ -218,7 +218,7 @@ namespace :provision do
       end
     end
     File.open("provision/hiera/db/#{xp.role_with_name("ceph_monitor").servers.first}.yaml", "w") do |file|
-      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon xp::ceph::mds } }.to_yaml)
+      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon xp::ceph::mds xp::ceph::radosgw } }.to_yaml)
     end
     synced = false
   end

@@ -1,0 +1,34 @@
+# INSTALLED BY PUPPET
+# Template : 'xp/ceph/radosgw/apache/rgw.conf.erb'
+
+FastCgiExternalServer /var/www/s3gw.fcgi -socket /var/run/ceph/ceph.radosgw.<%= @monitor.split('.').first %>.fastcgi.sock
+
+<VirtualHost *:443>
+
+  ServerName <%= fqdn %>
+  DocumentRoot /var/www
+  RewriteEngine On
+  RewriteRule  ^/(.*) /s3gw.fcgi?%{QUERY_STRING} [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
+
+  <IfModule mod_fastcgi.c>
+    <Directory /var/www>
+      Options +ExecCGI
+      AllowOverride All
+      SetHandler fastcgi-script
+      Order allow,deny
+      Allow from all
+      AuthBasicAuthoritative Off
+    </Directory>
+  </IfModule>
+
+  AllowEncodedSlashes On
+  ErrorLog /var/log/apache2/error.log
+  CustomLog /var/log/apache2/access.log combined
+  ServerSignature Off
+
+  SSLEngine on
+  SSLCertificateFile /etc/apache2/ssl/apache.crt
+  SSLCertificateKeyFile /etc/apache2/ssl/apache.key
+  SetEnv SERVER_PORT_SECURE 443
+
+</VirtualHost>

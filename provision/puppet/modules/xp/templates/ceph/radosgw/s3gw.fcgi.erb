@@ -1,0 +1,4 @@
+#!/bin/sh
+# INSTALLED BY PUPPET
+# Content : template('xp/ceph/radosgw/s3gw.fcgi.erb')
+exec /usr/bin/radosgw -c /etc/ceph/ceph.conf -n client.radosgw.<%= @monitor.split('.').first %>

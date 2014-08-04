@@ -1,5 +1,5 @@
 # INSTALLED BY PUPPET
-# template('xp/ceph/ceph.conf.erb')
+# Content : template('xp/ceph/ceph.conf.erb')
 
 [global]
     fsid = <%= @fsid %>
@@ -53,7 +53,15 @@
 <% end -%>
 
 [mds]
-  mds data = /srv/ceph/mds.$id
+    mds data = /srv/ceph/mds.$id
 [mds.0]
-  host = <%= @mds.split('.').first %>
+    host = <%= @mds.split('.').first %>
 
+[client.radosgw.<%= @monitor.split('.').first %>]
+    host = <%= @monitor %>
+    keyring = /etc/ceph/ceph.client.radosgw.keyring
+    rgw socket path = /var/run/ceph/ceph.radosgw.<%= @monitor.split('.').first %>.fastcgi.sock
+    rgw data = /srv/ceph/radosgw/ceph-radosgw.gateway
+    log file = /var/log/ceph/client.radosgw.<%= @monitor.split('.').first %>.log
+    rgw ops log rados = true
+    rgw enable ops log = true
