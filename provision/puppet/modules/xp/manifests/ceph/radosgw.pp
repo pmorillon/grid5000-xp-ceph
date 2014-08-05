@@ -32,6 +32,12 @@ class xp::ceph::radosgw {
       ensure => installed;
   }
 
+  service {
+    'radosgw':
+      ensure  => running,
+      require => [Package['radosgw'], File['/etc/ceph/ceph.conf']];
+  }
+
   file {
     '/etc/ceph/ceph.client.radosgw.keyring':
       ensure  => file,
