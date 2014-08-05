@@ -99,7 +99,7 @@ class xp::ceph::radosgw {
         exec {
           "enable site $name":
             command => "/usr/sbin/a2ensite $name",
-            unless => "/usr/bin/test -f $apache2::apache2_sites-enabled/'$name'",
+            unless => "/usr/bin/test -f /etc/apache2/sites-enabled/'$name'",
             notify => Service["apache2"],
             require => Package["apache2"];
         }
@@ -108,7 +108,7 @@ class xp::ceph::radosgw {
         exec {
           "disable site $name":
             command => "/usr/sbin/a2dissite $name",
-            onlyif => "/usr/bin/test -f $apache2::apache2_sites-enabled/'$name'",
+            onlyif => "/usr/bin/test -f /etc/apache2/sites-enabled/'$name'",
             notify => Service["apache2"],
             require => Package["apache2"];
         }
