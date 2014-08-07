@@ -80,9 +80,11 @@ class xp::ceph::radosgw {
     'Add radosgw key to the Ceph Storage Cluster':
       command     => "/usr/bin/ceph -k /etc/ceph/ceph.client.admin.keyring auth add client.radosgw.${monitor_short} -i /etc/ceph/ceph.client.radosgw.keyring",
       refreshonly => true;
-    #'Generate apache certs':
-      #command => "/usr/bin/openssl req -new -x509 -days 365 -nodes -out /etc/apache2/ssl/apache.crt -keyout /etc/apache2/ssl/apache.key",
-      #creates => '/etc/apache2/ssl/apache.key';
+    'Generate apache certs':
+      command => "/usr/bin/openssl req -new -x509 -days 365 -nodes -out /etc/apache2/ssl/apache.crt -keyout /etc/apache2/ssl/apache.key \
+      -subj \"/C=FR/ST=/O=/localityName=Rennes/commonName=/organizationalUnitName=/emailAddress=toto@inria.fr/\"",
+      creates => '/etc/apache2/ssl/apache.key',
+      notify  => Service['apache2'];
   }
 
   #File['/etc/apache2/ssl'] -> Exec['Generate apache certs']
