@@ -84,6 +84,7 @@ class xp::ceph::radosgw {
       command => "/usr/bin/openssl req -new -x509 -days 365 -nodes -out /etc/apache2/ssl/apache.crt -keyout /etc/apache2/ssl/apache.key \
       -subj \"/C=FR/ST=/O=/localityName=Rennes/commonName=/organizationalUnitName=/emailAddress=toto@inria.fr/\"",
       creates => '/etc/apache2/ssl/apache.key',
+      require => File['/etc/apache2/ssl'],
       notify  => Service['apache2'];
   }
 
