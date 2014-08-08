@@ -195,3 +195,71 @@ Edit `./xp.conf` file and add the `reservation` option :
 
 	walltime        '5:00:00'
 	reservation     '2014-07-01 13:00:00'
+
+## Rados benchmarks
+
+### Scenario `paranoia_4nodes_16osds_ext4`
+
+```
+grid5000-xp-ceph|master ⇒ cap ssh:ceph 
+...
+root@paranoia-1:~# rados mkpool bench
+successfully created pool bench
+root@paranoia-1:~# rados bench -p bench 60 write --no-cleanup
+...
+ Total time run:         60.231902
+Total writes made:      7430
+Write size:             4194304
+Bandwidth (MB/sec):     493.426 
+
+Stddev Bandwidth:       83.2429
+Max bandwidth (MB/sec): 580
+Min bandwidth (MB/sec): 0
+Average Latency:        0.129699
+Stddev Latency:         0.117525
+Max latency:            0.793961
+Min latency:            0.023329
+root@paranoia-1:~# rados bench -p bench 60 seq
+...
+ Total time run:        20.622478
+Total reads made:     7430
+Read size:            4194304
+Bandwidth (MB/sec):    1441.146 
+
+Average Latency:       0.0443867
+Max latency:           0.612827
+Min latency:           0.003959
+```
+
+### Scenario `econome_8nodes_8osds_ext4`
+
+```
+grid5000-xp-ceph|master ⇒ cap ssh:ceph 
+...
+root@econome-1:~# rados mkpool bench
+successfully created pool bench
+root@econome-1:~# rados bench -p bench 60 write --no-cleanup
+...
+ Total time run:         60.621542
+Total writes made:      2344
+Write size:             4194304
+Bandwidth (MB/sec):     154.664 
+
+Stddev Bandwidth:       61.6968
+Max bandwidth (MB/sec): 256
+Min bandwidth (MB/sec): 0
+Average Latency:        0.413596
+Stddev Latency:         0.463992
+Max latency:            4.06297
+Min latency:            0.038966
+root@econome-1:~# rados bench -p bench 60 seq
+...
+ Total time run:        7.272197
+Total reads made:     2344
+Read size:            4194304
+Bandwidth (MB/sec):    1289.294 
+
+Average Latency:       0.0495207
+Max latency:           0.30642
+Min latency:           0.004439
+```
