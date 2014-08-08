@@ -44,9 +44,14 @@ def scenario; @scenario; end
 
 # Define a OAR job for nodes of the ceph cluster
 #
+resources = []
+resources << %{{type='kavlan-local'}/vlan=1} if scenario['cluster_network_interface']
+resources << %{{cluster='#{scenario['cluster']}'}/nodes=#{scenario['ceph_nodes_count']}}
+resources << %{walltime=#{XP5K::Config[:walltime]}}
+
 job_description = {
-  :resources  => %{{type='kavlan-local'}/vlan=1,{cluster='#{scenario['cluster']}'}/nodes=#{scenario['ceph_nodes_count']},walltime=#{XP5K::Config[:walltime]}},
-  :site       => XP5K::Config[:site] || scenario[:site] || 'rennes',
+  :resources  => resources.join(","),
+  :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
   :queue      => XP5K::Config[:queue] || 'default',
   :types      => ["deploy"],
   :name       => "ceph_nodes",
@@ -118,7 +123,7 @@ before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
 before :start, "provision:hiera_generate"
 before :start, "provision:frontend"
-before :start, "vlan:set"
+before :start, "vlan:set" if scenario['cluster_network_interface']
 before :start, "provision:nodes"
 before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
@@ -286,7 +291,7 @@ def generateHieraDatabase
     'ceph_nodes'   => xp.role_with_name("ceph_nodes").servers,
     'ceph_monitor' => xp.role_with_name("ceph_monitor").servers.first,
     'ceph_mds'     => xp.role_with_name("ceph_monitor").servers.first,
-    'vlan'         => xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first,
+    'vlan'         => scenario['cluster_network_interface'] ? xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first : 0,
     'ceph_fsid'    => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
   }
   xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
