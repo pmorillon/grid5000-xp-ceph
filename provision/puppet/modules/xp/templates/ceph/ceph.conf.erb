@@ -38,8 +38,10 @@
     cluster addr = <%= Resolv.getaddress(node.gsub(/-(\d+)/, '-\1-' + @cluster_network_interface + '-kavlan-' + vlan_id))%>
     <%- end -%>
     public addr = <%= Resolv.getaddress(node) %>
+    <%- if device != 'sda' -%>
     osd mkfs type = <%= @fs %>
     devs = /dev/<%= device %>1
+    <%- end -%>
   <%- end -%>
 
 <% end -%>

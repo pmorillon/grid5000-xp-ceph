@@ -45,11 +45,18 @@ class xp::ceph::osd {
     $device_id = get_array_id($devices, $name)
     $node_id = $xp::ceph::osd::node_id
     $id = inline_template("<%= @node_id * @devices.length + @device_id %>")
+    $partition = $name ? {
+      'sda'   => 5,
+      default => 1
+    }
 
     file {
       "/srv/ceph/osd_${id}":
         tag    => 'ceph_tree',
-        notify => Exec["/sbin/parted -s /dev/${name} mklabel msdos"];
+        notify => $name ? {
+          'sda'   => Exec["/sbin/mkfs.${fstype} /dev/${name}${partition}"],
+          default => Exec["/sbin/parted -s /dev/${name} mklabel msdos"]
+        }
     }
 
     exec {
@@ -58,10 +65,10 @@ class xp::ceph::osd {
         refreshonly => true,
         require     => Package['parted'];
       "/sbin/parted -s /dev/${name} --align optimal mkpart primary ${fstype} 0 100%":
-        notify      => Exec["/sbin/mkfs.${fstype} /dev/${name}1"],
+        notify      => Exec["/sbin/mkfs.${fstype} /dev/${name}${partition}"],
         refreshonly => true,
         require     => Package['parted'];
-      "/sbin/mkfs.${fstype} /dev/${name}1":
+      "/sbin/mkfs.${fstype} /dev/${name}${partition}":
         refreshonly => true;
       "initialize osd id ${id} data directory":
         command => "/usr/bin/ceph-osd -i ${id} --mkfs --mkkey",
@@ -80,13 +87,21 @@ class xp::ceph::osd {
     File["/srv/ceph/osd_${id}"] -> Exec["initialize osd id ${id} data directory"]
     Package['ceph'] -> Exec["initialize osd id ${id} data directory"] ~> Exec["Register the osd ${id} authentication key"]
 
+    if ($name == 'sda') {
+      mount {
+        "/tmp":
+          ensure  => unmounted,
+          before  => [Mount["/srv/ceph/osd_${id}"],Exec["/sbin/mkfs.${fstype} /dev/${name}${partition}"]];
+      }
+    }
+
     mount {
       "/srv/ceph/osd_${id}":
         ensure  => mounted,
-        device  => "/dev/${name}1",
+        device  => "/dev/${name}${partition}",
         fstype  => $fstype,
         options => 'rw,noexec,nodev,noatime,nodiratime,barrier=0',
-        require => Exec["/sbin/mkfs.${fstype} /dev/${name}1"];
+        require => Exec["/sbin/mkfs.${fstype} /dev/${name}${partition}"];
     }
 
     service {

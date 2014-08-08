@@ -127,6 +127,7 @@ before :start, "vlan:set" if scenario['cluster_network_interface']
 before :start, "provision:nodes"
 before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
+before :start, "umount_tmp"
 before :start, "provision:nodes"
 
 
@@ -276,6 +277,15 @@ namespace :vlan do
     vlan.submit :nodes => nodes
   end
 
+end
+
+
+# Task to umount /tmp on ceph nodes
+#
+desc "umount /tmp on"
+task :umount_tmp, :roles => :ceph_nodes do
+  set :user, "root"
+  run "umount /tmp"
 end
 
 
