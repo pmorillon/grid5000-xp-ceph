@@ -133,6 +133,7 @@ before :start, "provision:nodes"
 
 # Empty task for the `start` workflow
 #
+desc "Start the experiment"
 task :start do
 end
 
