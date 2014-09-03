@@ -134,10 +134,8 @@ Here we use the default scenario described in the file `scenarios/paranoia_4node
             11368 MB used, 8344 GB / 8802 GB avail
                  192 active+clean
     
-	root@paranoia-2:~# ceph osd pool set data pg_num 1024
-	set pool 0 pg_num to 1024
-	root@paranoia-2:~# ceph osd pool set data pgp_num 1024
-	set pool 0 pgp_num to 1024
+	root@paranoia-2:~# ceph mkpool test
+  	successfully created pool tests
 	root@paranoia-2:~# ceph -s
     cluster 7d8ef28c-11ab-4532-830c-fc87a4c6a200
      health HEALTH_OK
