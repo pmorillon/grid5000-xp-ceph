@@ -46,6 +46,13 @@ class xp::ceph {
       owner  => root,
       group  => root,
       source => "puppet://${puppetmaster}/xpfiles/id_rsa_ceph.pub";
+    '/etc/ceph/ceph.client.admin.keyring':
+      ensure  => file,
+      mode    => '0600',
+      owner   => root,
+      group   => root,
+      source  => "puppet://${puppetmaster}/xpfiles/ceph.client.admin.keyring",
+      require => Package['ceph'];
   }
 
   exec {

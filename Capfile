@@ -22,6 +22,7 @@ def xp; @xp; end
 XP5K::Config[:scenario]   ||= 'paranoia_4nodes_16osds_ext4'
 XP5K::Config[:walltime]   ||= '1:00:00'
 XP5K::Config[:user]       ||= ENV['USER']
+XP5K::Config[:computes]   ||= 1
 
 # Constants
 #
@@ -67,15 +68,19 @@ xp.define_job(job_description)
 
 # Define a OAR job for the frontend (puppetmaster) and computes nodes
 #
+resources = []
+resources << %{nodes=#{XP5K::Config[:computes] + 1}}
+resources << %{walltime=#{XP5K::Config[:walltime]}}
+
 job_description = {
-  :resources  => %{nodes=2,walltime=#{XP5K::Config[:walltime]}},
+  :resources  => resources.join(","),
   :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
   :queue      => 'default',
   :types      => ["deploy"],
   :name       => "ceph_frontend",
   :roles      => [
     XP5K::Role.new({ :name => 'frontend', :size => 1 }),  # For the puppet master
-    XP5K::Role.new({ :name => 'computes', :size => 1 })
+    XP5K::Role.new({ :name => 'computes', :size => XP5K::Config[:computes] })
   ],
   :command    => "sleep 186400"
 }
@@ -114,6 +119,10 @@ role :ceph_monitor do
   xp.role_with_name("ceph_monitor").servers
 end
 
+role :computes do
+  xp.role_with_name("computes").servers
+end
+
 
 # Define the workflow
 #
@@ -124,7 +133,7 @@ before :start, "provision:setup_server"
 before :start, "provision:hiera_generate"
 before :start, "provision:frontend"
 before :start, "vlan:set" if scenario['cluster_network_interface']
-before :start, "provision:nodes"
+before :start, "provision:all"
 before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
 before :start, "umount_tmp"
@@ -174,7 +183,7 @@ end
 #
 namespace :provision do
   desc "Install puppet agent"
-  task :setup_agent, :roles => [:frontend, :ceph_nodes] do
+  task :setup_agent, :roles => [:frontend, :ceph_nodes, :computes] do
     set :user, "root"
     run 'apt-get update && apt-get -y install curl wget'
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 wget -O /tmp/puppet_install.sh https://raw.githubusercontent.com/pmorillon/puppet-puppet/master/extras/bootstrap/puppet_install.sh"
@@ -201,6 +210,22 @@ namespace :provision do
   desc "Provision nodes"
   task :nodes, :roles => :ceph_nodes, :on_error => :continue do
     set :user, "root"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
+  end
+
+  before 'provision:computes', 'provision:upload_modules'
+
+  desc 'Provision computes'
+  task :computes, :roles => :computes, :on_error => :continue do
+    set :user, 'root'
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
+  end
+
+  before 'provision:all', 'provision:upload_modules'
+
+  desc 'Provision all puppet agents (ceph nodes and computes nodes)'
+  task :all, :roles => [:computes, :ceph_nodes], :on_error => :continue do
+    set :user, 'root'
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
   end
 
@@ -290,6 +315,20 @@ task :umount_tmp, :roles => :ceph_nodes do
 end
 
 
+# Task for benchs
+#
+namespace :bench do
+
+  desc "run command on computes nodes (need CMD)"
+  task :cmd, :roles => :computes do
+    raise "Need CMD environment variable" unless ENV['CMD']
+    set :user, 'root'
+    run ENV['CMD']
+  end
+
+end
+
+
 # Manage the Hiera database
 #
 def generateHieraDatabase
@@ -302,6 +341,7 @@ def generateHieraDatabase
     'ceph_nodes'   => xp.role_with_name("ceph_nodes").servers,
     'ceph_monitor' => xp.role_with_name("ceph_monitor").servers.first,
     'ceph_mds'     => xp.role_with_name("ceph_monitor").servers.first,
+    'computes'     => xp.role_with_name("computes").servers,
     'vlan'         => scenario['cluster_network_interface'] ? xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first : 0,
     'ceph_fsid'    => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
   }
@@ -317,6 +357,12 @@ def generateHieraDatabase
       file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon } }.to_yaml)
     end
   end
+  xp.role_with_name("computes").servers.each do |node|
+    File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
+        file.puts({ 'classes' => %w{ xp::nodes } }.to_yaml)
+    end
+  end
+
 end
 
 

@@ -9,7 +9,7 @@ class xp::puppet::master {
     group  => root
   }
 
-  $agents       = hiera_array('ceph_nodes')
+  $agents       = [hiera_array('ceph_nodes'), hiera_array('computes')]
   $version      = '3.4.2-1puppetlabs1'
   $frontend     = hiera('frontend')
 

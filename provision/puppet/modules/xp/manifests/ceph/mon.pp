@@ -19,13 +19,6 @@ class xp::ceph::mon {
       tag    => 'ceph_tree';
     "/srv/ceph/mon_${hostname}/data":
       tag     => 'ceph_tree';
-    '/etc/ceph/ceph.client.admin.keyring':
-      ensure  => file,
-      mode    => '0600',
-      owner   => root,
-      group   => root,
-      source  => "puppet://${puppetmaster}/xpfiles/ceph.client.admin.keyring",
-      require => Package['ceph'];
   }
 
   exec {
