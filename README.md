@@ -43,6 +43,9 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 
 	# Choose a scenario (see ./scenarios directory)
 	scenario        'paranoia_4nodes_16osds_ext4'
+	
+	# Computes nodes
+	computes 		 10 # default is 1
 
 
 ### For external usage
@@ -81,6 +84,9 @@ Create the file `xp.conf` into the `grid5000-xp-ceph` directory.
 
 	# Choose a scenario (see ./scenarios directory)
 	scenario        'paranoia_4nodes_16osds_ext4'
+	
+	# Computes nodes
+	computes 		 10 # default is 1
 
 
 #### Configure ssh config file
