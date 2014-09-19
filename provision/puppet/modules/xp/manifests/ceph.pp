@@ -15,16 +15,20 @@ class xp::ceph {
   $mds = hiera('ceph_mds')
   $vlan_id = hiera('vlan')
   $cluster_network_interface = hiera('cluster_network_interface')
+  $path = '/var/lib/ceph'
 
   package {
     ['xfsprogs', 'parted']:
       ensure => installed;
   }
 
-  file {
-    '/srv/ceph':
-      tag    => 'ceph_tree';
-  }
+  #file {
+    #$path:
+      #ensure => directory,
+      #mode   => '0644',
+      #owner  => root,
+      #group  => root
+  #}
 
   file {
     '/etc/ceph/ceph.conf':

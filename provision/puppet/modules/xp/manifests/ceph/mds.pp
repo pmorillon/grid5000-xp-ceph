@@ -13,23 +13,23 @@ class xp::ceph::mds {
   $node_id = get_array_id($nodes, $fqdn)
 
   file {
-    "/srv/ceph/mds.${node_id}":
+    "${xp::ceph::path}/mds/ceph-${hostname}":
       tag => 'ceph_tree';
   }
 
   exec {
     'Create mds key':
-      command => "/usr/bin/ceph auth get-or-create mds.${node_id} mds 'allow ' osd 'allow *' mon 'allow rwx' > /srv/ceph/mds.${node_id}/keyring",
-      creates => "/srv/ceph/mds.${node_id}/keyring",
-      require => [Package['ceph'], File["/srv/ceph/mds.${node_id}"]];
+      command => "/usr/bin/ceph auth get-or-create mds.${hostname} mds 'allow' osd 'allow rwx' mon 'allow profile mds' > ${xp::ceph::path}/mds/ceph-${hostname}/keyring",
+      creates => "${xp::ceph::path}/mds/ceph-${hostname}/keyring",
+      require => [Package['ceph'], File["${xp::ceph::path}/mds/ceph-${hostname}"]];
   }
 
   service {
     "ceph-mds":
       ensure  => running,
-      start   => "service ceph start mds.${node_id}",
-      stop    => "service ceph stop mds.${node_id}",
-      status  => "service ceph status mds.${node_id}",
+      start   => "service ceph start mds.${hostname}",
+      stop    => "service ceph stop mds.${hostname}",
+      status  => "service ceph status mds.${hostname}",
       require => Exec['Populate the monitor daemon'];
   }
 

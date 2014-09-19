@@ -15,9 +15,9 @@ class xp::ceph::mon {
   }
 
   file {
-    "/srv/ceph/mon_${hostname}":
+    "${xp::ceph::path}/mon/mon_${hostname}":
       tag    => 'ceph_tree';
-    "/srv/ceph/mon_${hostname}/data":
+    "${xp::ceph::path}/mon/mon_${hostname}/data":
       tag     => 'ceph_tree';
   }
 
@@ -46,8 +46,8 @@ class xp::ceph::mon {
       command => "/usr/bin/ceph-mon --mkfs -i ${hostname} --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring",
       user    => root,
       group   => root,
-      creates => "/srv/ceph/mon_${hostname}/data/keyring",
-      require => [File["/srv/ceph/mon_${hostname}/data"], Exec['Generate monitor map'], Exec['Generate monitor secret key']];
+      creates => "${xp::ceph::path}/mon/mon_${hostname}/data/keyring",
+      require => [File["${xp::ceph::path}/mon/mon_${hostname}/data"], Exec['Generate monitor map'], Exec['Generate monitor secret key']];
   }
 
   unless $mon_device == 'sda' {
@@ -56,7 +56,7 @@ class xp::ceph::mon {
         notify      => Exec["/sbin/parted -s /dev/${mon_device} --align optimal mkpart primary ${fs} 0 100%"],
         refreshonly => true,
         require     => Package['parted'],
-        subscribe   => File["/srv/ceph/mon_${hostname}"];
+        subscribe   => File["${xp::ceph::path}/mon/mon_${hostname}"];
       "/sbin/parted -s /dev/${mon_device} --align optimal mkpart primary ${fs} 0 100%":
         notify      => Exec["/sbin/mkfs.${fs} /dev/${mon_device}1"],
         refreshonly => true,
@@ -66,13 +66,13 @@ class xp::ceph::mon {
     }
 
     mount {
-      "/srv/ceph/mon_${hostname}":
+      "${xp::ceph::path}/mon/mon_${hostname}":
         ensure    => mounted,
         device    => "/dev/${mon_device}1",
         fstype    => $fs,
         options   => 'rw,noexec,nodev,noatime,nodiratime,barrier=0',
         require   => Exec["/sbin/mkfs.${fs} /dev/${mon_device}1"],
-        before    => File["/srv/ceph/mon_${hostname}/data"];
+        before    => File["${xp::ceph::path}/mon/mon_${hostname}/data"];
     }
   }
 

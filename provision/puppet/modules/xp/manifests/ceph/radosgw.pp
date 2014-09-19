@@ -70,9 +70,9 @@ class xp::ceph::radosgw {
   }
 
   file {
-    '/srv/ceph/radosgw':
+    "${xp::ceph::path}/radosgw":
       ensure => directory;
-    '/srv/ceph/radosgw/ceph-radosgw.gateway':
+    "${xp::ceph::path}/radosgw/ceph-radosgw.gateway":
       ensure => directory;
   }
 

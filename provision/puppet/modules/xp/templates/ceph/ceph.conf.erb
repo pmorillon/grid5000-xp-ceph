@@ -18,10 +18,10 @@
     osd crush chooseleaf type = 1
 
 [osd]
-    osd data = /srv/ceph/osd_$id
-    osd journal = /srv/ceph/osd_$id/journal
+    osd data = <%= @path %>/osd/osd_$id
+    osd journal = <%= @path %>/osd/osd_$id/journal
     osd journal size = 512
-    keyring = /etc/ceph/keyring.$name
+    keyring = <%= @path %>/osd/osd_$id/keyring
 
 <% unless @fs == 'xfs' -%>
     filestore xattr use omap = true
@@ -47,7 +47,7 @@
 <% end -%>
 
 [mon]
-    mon data = /srv/ceph/mon_$id/data
+    mon data = <%= @path %>/mon/mon_$id/data
 <% @nodes.each do |node| -%>
 [mon.<%= node.split('.').first %>]
     host = <%= node.split('.').first %>
@@ -55,15 +55,16 @@
 <% end -%>
 
 [mds]
-    mds data = /srv/ceph/mds.$id
-[mds.0]
+    mds data = <%= @path %>/mds/ceph-$id
+    keyring = <%= @path %>/mds/ceph-$id/keyring
+[mds.<%= @mds.split('.').first %>]
     host = <%= @mds.split('.').first %>
 
 [client.radosgw.<%= @monitor.split('.').first %>]
     host = <%= @monitor.split('.').first %>
     keyring = /etc/ceph/ceph.client.radosgw.keyring
     rgw socket path = /var/run/ceph/ceph.radosgw.<%= @monitor.split('.').first %>.fastcgi.sock
-    rgw data = /srv/ceph/radosgw/ceph-radosgw.gateway
+    rgw data = <%= @path %>/radosgw/ceph-radosgw.gateway
     log file = /var/log/ceph/client.radosgw.<%= @monitor.split('.').first %>.log
     rgw ops log rados = true
     rgw enable ops log = true
