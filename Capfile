@@ -315,17 +315,13 @@ task :umount_tmp, :roles => :ceph_nodes do
 end
 
 
-# Task for benchs
+# Task for commands
 #
-namespace :bench do
-
-  desc "run command on computes nodes (need CMD)"
-  task :cmd, :roles => :computes do
-    raise "Need CMD environment variable" unless ENV['CMD']
-    set :user, 'root'
-    run ENV['CMD']
-  end
-
+desc "run command on computes nodes (need CMD and ROLES, computes by default)"
+task :cmd, :roles => :computes do
+  raise "Need CMD environment variable" unless ENV['CMD']
+  set :user, 'root'
+  run ENV['CMD']
 end
 
 
