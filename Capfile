@@ -355,7 +355,7 @@ def generateHieraDatabase
   end
   xp.role_with_name("computes").servers.each do |node|
     File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-        file.puts({ 'classes' => %w{ xp::nodes } }.to_yaml)
+        file.puts({ 'classes' => %w{ xp::computes } }.to_yaml)
     end
   end
 
