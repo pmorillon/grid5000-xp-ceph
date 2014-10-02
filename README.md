@@ -8,18 +8,18 @@ The goal of this experiment is to benchmark a Ceph cluster on Grid'5000 and comp
 
 ### For usage from Grid'5000
 
-#### Clone the repository
-
-From a Grid'5000 frontend, here `frontend.rennes.grid5000.fr`.
-
-	$ git clone git@github.com:pmorillon/grid5000-xp-ceph.git
-	$ cd grid5000-xp-ceph
-
 #### Configure your environment
 
 	$ export PATH=~/.gem/ruby/1.9.1/bin:$PATH
 	$ export http_proxy=http://proxy:3128
 	$ export https_proxy=http://proxy:3128
+
+#### Clone the repository
+
+From a Grid'5000 frontend, here `frontend.rennes.grid5000.fr`.
+
+	$ git clone https://github.com/pmorillon/grid5000-xp-ceph.git
+	$ cd grid5000-xp-ceph
 
 #### Install Rugygems dependencies with Bundler
 
