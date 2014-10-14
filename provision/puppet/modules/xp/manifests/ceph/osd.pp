@@ -104,7 +104,10 @@ class xp::ceph::osd {
         ensure  => mounted,
         device  => "/dev/${name}${partition}",
         fstype  => $fstype,
-        options => 'user_xattr,rw,noexec,nodev,noatime,nodiratime,barrier=0',
+        options => $fstype ? {
+          'ext4' => 'user_xattr,rw,noexec,nodev,noatime,nodiratime,barrier=0',
+          'xfs'  => 'rw,noexec,nodev,noatime,nodiratime,barrier=0'
+        },
         require => Exec["/sbin/mkfs.${fstype} /dev/${name}${partition}"];
     }
 
