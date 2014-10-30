@@ -1,0 +1,36 @@
+---
+- filesystem: ext4
+  site: nancy
+  cluster_network_interface: false
+  clusters:
+    - name: graphene
+      ceph_nodes_count: 10
+      node_description:
+        mon: sda
+        osd:
+          - sda
+- filesystem: ext4
+  site: rennes
+  cluster_network_interface: false
+  frontend: true
+  computes: 1
+  clusters:
+    - name: paranoia
+      ceph_nodes_count: 4
+      node_description:
+        mon: sda
+        osd:
+          - sdb
+          - sdc
+          - sdd
+          - sde
+- filesystem: ext4
+  site: luxembourg
+  cluster_network_interface: false
+  clusters:
+    - name: petitprince
+      ceph_nodes_count: 10
+      node_description:
+        mon: sda
+        osd:
+          - sda
