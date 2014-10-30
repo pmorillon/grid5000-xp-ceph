@@ -2,9 +2,9 @@ class xp::ceph::mon {
 
   include "xp::ceph"
 
-  $node_description = hiera_hash('node_description')
-  $mon_device = $node_description['mon']
-  $fs = hiera('filesystem')
+  $ceph_description = hiera_hash('ceph_description')
+  $mon_device = $ceph_description[$fqdn]['mon']['device']
+  $fs = hiera('fs')
   $fsid = hiera('ceph_fsid')
 
   File <| tag == 'ceph_tree' |> {

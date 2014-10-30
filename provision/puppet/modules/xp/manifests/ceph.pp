@@ -6,15 +6,16 @@ class xp::ceph {
     #version => 'firefly';
   }
 
-  $node_description = hiera_hash('node_description')
-  $osd_devices = $node_description['osd']
-  $fs = hiera('filesystem')
+  $ceph_description = hiera_hash('ceph_description')
+  $osd_count = hiera('osd_count')
+  $fs = hiera('fs')
   $fsid = hiera('ceph_fsid')
   $nodes = hiera_array('ceph_nodes')
   $monitor = hiera('ceph_monitor')
   $mds = hiera('ceph_mds')
   $vlan_id = hiera('vlan')
-  $cluster_network_interface = hiera('cluster_network_interface')
+  $cluster_network_interfaces = hiera('cluster_network_interfaces')
+  $cluster_network_interface = $cluster_network_interfaces[$site]
   $path = '/var/lib/ceph'
 
   package {

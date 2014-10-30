@@ -1,10 +1,13 @@
 ---
 filesystem: ext4
 site: nantes
-cluster: 'econome'
-ceph_nodes_count: 8
+frontend: true
+computes: 1
 cluster_network_interface: false
-node_description:
-  mon: sda
-  osd:
-    - sda
+clusters:
+  - name: 'econome'
+    ceph_nodes_count: 2
+    node_description:
+      mon: sda
+      osd:
+        - sda

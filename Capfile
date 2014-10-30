@@ -39,64 +39,65 @@ synced = false
 
 # Load scenario
 #
-@scenario = YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml"))
+yaml_obj = YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml"))
+@scenario = yaml_obj.class == Array ? yaml_obj : [yaml_obj]
 def scenario; @scenario; end
 
 
 # Define a OAR job for nodes of the ceph cluster
 #
-resources = []
-resources << %{{type='kavlan-local'}/vlan=1} if scenario['cluster_network_interface']
-resources << %{{cluster='#{scenario['cluster']}'}/nodes=#{scenario['ceph_nodes_count']}}
-resources << %{walltime=#{XP5K::Config[:walltime]}}
+scenario.each do |site|
 
-job_description = {
-  :resources  => resources.join(","),
-  :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
-  :queue      => XP5K::Config[:queue] || 'default',
-  :types      => ["deploy"],
-  :name       => "ceph_nodes",
-  :roles      => [
-    XP5K::Role.new({ :name => 'ceph_nodes', :size => scenario['ceph_nodes_count'] }),
-    XP5K::Role.new({ :name => 'ceph_monitor', :size => 1, :inner => 'ceph_nodes'})
-  ],
-  :command    => "sleep 186400"
-}
-job_description[:reservation] = XP5K::Config[:reservation] if not XP5K::Config[:reservation].nil?
-xp.define_job(job_description)
+  # Manages resources per site
+  resources = []
+  resources << %{{type='kavlan-local'}/vlan=1} if site['cluster_network_interface']
+  site['clusters'].each do |cluster|
+    resources << %{{cluster='#{cluster['name']}'}/nodes=#{cluster['ceph_nodes_count']}}
+  end
+  resources << %{nodes=1} if site['frontend']
+  resources << %{nodes=#{site['computes']}} if site['computes']
+  resources << %{walltime=#{XP5K::Config[:walltime]}}
 
+  # Manage roles per site
+  roles = []
+  roles << XP5K::Role.new({ :name => 'frontend', :size => 1 }) if site['frontend']
+  roles << XP5K::Role.new({ :name => "computes_#{site['site']}", :size => site['computes'] }) if site['computes']
+  site['clusters'].each do |cluster|
+    roles << XP5K::Role.new({
+      :name    => "ceph_nodes_#{cluster['name']}",
+      :size    => cluster['ceph_nodes_count'],
+      :pattern => cluster['name']
+    })
+    roles << XP5K::Role.new({
+      :name => "ceph_monitor_#{cluster['name']}",
+      :size => 1,
+      :inner => "ceph_nodes_#{cluster['name']}"
+    })
+  end
 
-# Define a OAR job for the frontend (puppetmaster) and computes nodes
-#
-resources = []
-resources << %{nodes=#{XP5K::Config[:computes] + 1}}
-resources << %{walltime=#{XP5K::Config[:walltime]}}
+  job_description = {
+    :resources => resources.join(","),
+    :site      => site['site'],
+    :queue     => XP5K::Config[:queue] || 'default',
+    :types     => ["deploy"],
+    :name      => "xp5k_ceph_#{site['site']}",
+    :roles     => roles,
+    :command   => "sleep 186400"
+  }
+  job_description[:reservation] = XP5K::Config[:reservation] if not XP5K::Config[:reservation].nil?
+  xp.define_job(job_description)
 
-job_description = {
-  :resources  => resources.join(","),
-  :site       => XP5K::Config[:site] || scenario['site'] || 'rennes',
-  :queue      => 'default',
-  :types      => ["deploy"],
-  :name       => "ceph_frontend",
-  :roles      => [
-    XP5K::Role.new({ :name => 'frontend', :size => 1 }),  # For the puppet master
-    XP5K::Role.new({ :name => 'computes', :size => XP5K::Config[:computes] })
-  ],
-  :command    => "sleep 186400"
-}
-job_description[:reservation] = XP5K::Config[:reservation] if not XP5K::Config[:reservation].nil?
-xp.define_job(job_description)
+  # Define deployment on all nodes
+  #
+  xp.define_deployment({
+    :site          => site['site'],
+    :environment   => "wheezy-x64-base",
+    :jobs          => ["xp5k_ceph_#{site['site']}"],
+    :key           => File.read(XP5K::Config[:public_key]),
+    :notifications => ["xmpp:#{XP5K::Config[:user]}@jabber.grid5000.fr"]
+  })
 
-
-# Define deployment on all nodes
-#
-xp.define_deployment({
-  :site           => scenario['site'],
-  :environment    => "wheezy-x64-base",
-  :roles          => %w{ frontend ceph_nodes computes },
-  :key            => File.read(XP5K::Config[:public_key]),
-  :notifications  => ["xmpp:#{XP5K::Config[:user]}@jabber.grid5000.fr"]
-})
+end
 
 
 # Configure SSH for capistrano
@@ -112,15 +113,32 @@ role :frontend do
 end
 
 role :ceph_nodes do
-  xp.role_with_name("ceph_nodes").servers
+  nodes = []
+  scenario.each do |site|
+    site['clusters'].each do |cluster|
+      nodes << xp.role_with_name("ceph_nodes_#{cluster['name']}").servers
+    end
+  end
+  nodes.flatten!
 end
 
 role :ceph_monitor do
-  xp.role_with_name("ceph_monitor").servers
+  nodes = []
+  scenario.each do |site|
+    site['clusters'].each do |cluster|
+      nodes << xp.role_with_name("ceph_monitor_#{cluster['name']}").servers
+    end
+  end
+  # Fixme : manage multiple monitors
+  nodes.first
 end
 
 role :computes do
-  xp.role_with_name("computes").servers
+  nodes = []
+  scenario.each do |site|
+    nodes << xp.role_with_name("computes_#{site['site']}").servers if site['computes']
+  end
+  nodes.flatten!
 end
 
 
@@ -132,7 +150,7 @@ before :start, "provision:setup_agent"
 before :start, "provision:setup_server"
 before :start, "provision:hiera_generate"
 before :start, "provision:frontend"
-before :start, "vlan:set" if scenario['cluster_network_interface']
+before :start, "vlan:set"
 before :start, "provision:all"
 before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
@@ -210,7 +228,7 @@ namespace :provision do
   desc "Provision nodes"
   task :nodes, :roles => :ceph_nodes, :on_error => :continue do
     set :user, "root"
-    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("frontend").servers.first}"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --parser future --server #{xp.role_with_name("frontend").servers.first}"
   end
 
   before 'provision:computes', 'provision:upload_modules'
@@ -244,12 +262,20 @@ namespace :provision do
 
   desc "Add osd to Hiera"
   task :hiera_osd do
-    xp.role_with_name("ceph_nodes").servers.each do |node|
+    nodes = []
+    scenario.each do |site|
+      site['clusters'].each do |cluster|
+        nodes << xp.role_with_name("ceph_nodes_#{cluster['name']}").servers
+      end
+    end
+    nodes.flatten!
+    nodes.each do |node|
       File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
         file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon } }.to_yaml)
       end
     end
-    File.open("provision/hiera/db/#{xp.role_with_name("ceph_monitor").servers.first}.yaml", "w") do |file|
+    # Fixme: multiple monitor support
+    File.open("provision/hiera/db/#{serversForCapRoles("ceph_monitor").first}.yaml", "w") do |file|
       file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon xp::ceph::mds xp::ceph::radosgw } }.to_yaml)
     end
     synced = false
@@ -261,11 +287,27 @@ namespace :provision do
   task :create_osd, :roles => :ceph_monitor do
     set :user, 'root'
     hiera = YAML.load(File.read('provision/hiera/db/xp.yaml'))
-    nodes = hiera["ceph_nodes"]
-    devices = hiera["node_description"]["osd"]
-    cmd = Array.new(devices.length) { |i| "ceph osd create" }.join(" && ")
-    nodes.each do
+    ceph_description = hiera["ceph_description"]
+    ceph_description.each do |hostname,desc|
+      cmd = Array.new(desc['osd'].length) { |i| "ceph osd create" }.join(" && ")
       run cmd
+    end
+  end
+
+end
+
+namespace :ceph do
+
+  task :datacenter, :roles => :ceph_monitor do
+    set :user, 'root'
+    scenario.each do |site|
+      run "ceph osd crush add-bucket #{site['site']} datacenter"
+      run "ceph osd crush move #{site['site']} root=default"
+      site['clusters'].each do |cluster|
+        xp.role_with_name("ceph_nodes_#{cluster['name']}").servers.each do |node|
+          run "ceph osd crush move #{node.split(".").first} datacenter=#{site['site']}"
+        end
+      end
     end
   end
 
@@ -278,7 +320,7 @@ namespace :ssh do
 
   desc "ssh on the ceph monitor node"
   task :ceph do
-    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + xp.role_with_name('ceph_monitor').servers.first)
+    fork_exec('ssh', SSH_CONFIGFILE_OPT.split(" "), 'root@' + serversForCapRoles('ceph_monitor').first)
   end
 
   desc "ssh on the frontend (puppetmaster)"
@@ -295,12 +337,21 @@ namespace :vlan do
 
   desc "Set nodes into vlan"
   task :set do
-    vlanid = xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first.to_i
-    nodes = xp.role_with_name("ceph_nodes").servers.map { |node| node.gsub(/-(\d+)/, '-\1-eth2') }
-    logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
-    root = xp.connection.root.sites[scenario['site'].to_sym]
-    vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
-    vlan.submit :nodes => nodes
+    # Only manage local vlan when deploying ceph on one site
+    if scenario.length == 1
+      scenario.each do |site|
+        next if not site['cluster_network_interface']
+        vlanid = xp.job_with_name("xp5k_ceph_#{site['site']}")['resources_by_type']['vlans'].first.to_i
+        nodes = []
+        site['clusters'].each do |cluster|
+          nodes << xp.role_with_name("ceph_nodes_#{cluster['name']}").servers.map { |node| node.gsub(/-(\d+)/, '-\1-' + site['cluster_network_interface']) }
+        end
+        logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
+        root = xp.connection.root.sites[site['site'].to_sym]
+        vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
+        vlan.submit :nodes => nodes
+      end
+    end
   end
 
 end
@@ -324,6 +375,11 @@ task :cmd, :roles => :computes do
   run ENV['CMD']
 end
 
+# List servers from capistrano roles
+#
+def serversForCapRoles(roles)
+  find_servers(:roles => roles).collect { |x| x.host }
+end
 
 # Manage the Hiera database
 #
@@ -331,29 +387,68 @@ def generateHieraDatabase
   # Remove old databases from previous experiments
   %x{rm -f provision/hiera/db/*}
 
+  # Manage Vlan or not
+  if (scenario.length == 1 and scenario.first['cluster_network_interface'])
+    vlan = xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first
+  else
+    vlan = 0
+  end
+
+  # Generate ceph hierarchy
+  clusters_description = {}
+  cluster_network_interface = {}
+  ceph_description = {}
+  osd_id = 0
+  scenario.each do |site|
+    cluster_network_interface[site['site']] = site['cluster_network_interface']
+    site['clusters'].each do |cluster|
+      clusters_description[cluster['name']] = cluster['node_description']
+      xp.role_with_name("ceph_nodes_#{cluster['name']}").servers.each do |node|
+        ceph_description[node] ||= {}
+        cluster['node_description']['osd'].each do |osd|
+          ceph_description[node]['osd'] ||= []
+          ceph_description[node]['osd'] << {
+            'id'    => osd_id,
+            'device' => osd,
+            'fs'     => site['filesystem']
+          }
+          osd_id += 1
+        end
+        ceph_description[node]['mon'] = { 'device' => cluster['node_description']['mon'] }
+      end
+    end
+  end
+
   # Add experiment configuration into Hiera
   xpconfig = {
-    'frontend'     => xp.role_with_name("frontend").servers.first,
-    'ceph_nodes'   => xp.role_with_name("ceph_nodes").servers,
-    'ceph_monitor' => xp.role_with_name("ceph_monitor").servers.first,
-    'ceph_mds'     => xp.role_with_name("ceph_monitor").servers.first,
-    'computes'     => xp.role_with_name("computes").servers,
-    'vlan'         => scenario['cluster_network_interface'] ? xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first : 0,
-    'ceph_fsid'    => '7D8EF28C-11AB-4532-830C-FC87A4C6A200'
+    'frontend'                  => xp.role_with_name("frontend").servers.first,
+    'ceph_monitor'              => serversForCapRoles("ceph_monitor").first,
+    'ceph_mds'                  => serversForCapRoles("ceph_monitor").first,
+    'ceph_nodes'                => serversForCapRoles("ceph_nodes"),
+    'computes'                  => serversForCapRoles("computes"),
+    'vlan'                      => vlan,
+    'cluster_network_interfaces' => cluster_network_interface,
+    'ceph_fsid'                 => '7D8EF28C-11AB-4532-830C-FC87A4C6A200',
+    'ceph_description'          => ceph_description,
+    'osd_count'                 => osd_id,
+    'fs'                        => 'ext4'
   }
-  xpconfig.merge!(YAML.load(File.read("scenarios/#{XP5K::Config[:scenario]}.yaml")))
   FileUtils.mkdir('provision/hiera/db') if not Dir.exists?('provision/hiera/db')
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
     file.puts xpconfig.to_yaml
   end
 
   # Configure Puppet classes to apply on each nodes
-  xp.role_with_name("ceph_nodes").servers.each do |node|
-    File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon } }.to_yaml)
+  scenario.each do |site|
+    site['clusters'].each do |cluster|
+      serversForCapRoles("ceph_nodes").each do |node|
+        File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
+          file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon } }.to_yaml)
+        end
+      end
     end
   end
-  xp.role_with_name("computes").servers.each do |node|
+  serversForCapRoles("computes").each do |node|
     File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
         file.puts({ 'classes' => %w{ xp::computes } }.to_yaml)
     end

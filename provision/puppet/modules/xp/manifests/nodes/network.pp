@@ -1,6 +1,7 @@
 class xp::nodes::network {
 
-  $interface = hiera('cluster_network_interface')
+  $cluster_network_interfaces = hiera_hash('cluster_network_interfaces')
+  $interface = $cluster_network_interfaces[$site]
 
   if $interface {
 
