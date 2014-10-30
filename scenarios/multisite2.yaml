@@ -1,0 +1,33 @@
+---
+- filesystem: ext4
+  site: rennes
+  cluster_network_interface: false
+  frontend: true
+  computes: 1
+  clusters:
+    - name: parapide
+      ceph_nodes_count: 2
+      node_description:
+        mon: sda
+        osd:
+          - sda
+- filesystem: ext4
+  site: nantes
+  cluster_network_interface: false
+  clusters:
+    - name: econome
+      ceph_nodes_count: 2
+      node_description:
+        mon: sda
+        osd:
+          - sda
+- filesystem: ext4
+  site: luxembourg
+  cluster_network_interface: false
+  clusters:
+    - name: petitprince
+      ceph_nodes_count: 2
+      node_description:
+        mon: sda
+        osd:
+          - sda

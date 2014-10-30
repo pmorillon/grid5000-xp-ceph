@@ -1,13 +1,16 @@
 ---
 filesystem: xfs
 site: rennes
-cluster: paranoia
-ceph_nodes_count: 8
+frontend: true
+computes: 1
 cluster_network_interface: false
-node_description:
-  mon: sda
-  osd:
-    - sdb
-    - sdc
-    - sdd
-    - sde
+clusters:
+  - name: 'paranoia'
+  ceph_nodes_count: 8
+  node_description:
+    mon: sda
+    osd:
+      - sdb
+      - sdc
+      - sdd
+      - sde
