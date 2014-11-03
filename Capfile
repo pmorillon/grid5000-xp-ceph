@@ -311,6 +311,11 @@ namespace :ceph do
     end
   end
 
+  task :reweight, :roles => :ceph_nodes do
+    set :user, 'root'
+    run %{for i in $(ls /var/lib/ceph/osd); do ceph osd crush reweight osd.$(echo $i | cut -d'_' -f2) $(echo "scale=3;($(df /var/lib/ceph/osd/$i | grep osd | awk '{print $2;}')/(1024^3))" | bc); done}
+  end
+
 end
 
 

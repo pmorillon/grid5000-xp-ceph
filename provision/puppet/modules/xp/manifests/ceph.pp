@@ -19,7 +19,7 @@ class xp::ceph {
   $path = '/var/lib/ceph'
 
   package {
-    ['xfsprogs', 'parted']:
+    ['xfsprogs', 'parted', 'bc']:
       ensure => installed;
   }
 
