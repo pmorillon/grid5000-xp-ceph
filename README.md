@@ -186,7 +186,6 @@ See `scenarios/multisite.yaml`.
 ```shell
 cap start
 cap provision:nodes
-cap ceph:datacenter
 ```
 
 ### Open a shell on the first node of the Ceph cluster
@@ -267,6 +266,26 @@ Edit `./xp.conf` file and add the `reservation` option :
 ```
 walltime        '5:00:00'
 reservation     '2014-07-01 13:00:00'
+```
+
+### Multi-site multi-cluster deployment
+
+* Edit osd crush map to add datacenter buckets :
+```
+cap ceph:geo
+```
+
+* Reweight OSDs :
+```
+cap ceph:reweight
+```
+
+* Add a monitor per sites :
+```
+cap provision:hiera_mon
+cap provision:nodes
+cap ceph:geo_mon
+cap provision:nodes
 ```
 
 ## Rados benchmarks
