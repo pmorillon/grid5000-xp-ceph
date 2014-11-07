@@ -1,7 +1,7 @@
 class xp::ntp {
 
   package {
-    'ntp':
+    ['ntp', 'ntpdate']:
       ensure => installed;
   }
 
@@ -16,7 +16,8 @@ class xp::ntp {
       ensure => file,
       mode   => '0644',
       owner  => root,
-      group  => root;
+      group  => root,
+      source => 'puppet:///modules/xp/ntp/ntp.conf';
   }
 
   Package['ntp'] -> File['/etc/ntp.conf'] ~> Service['ntp']
