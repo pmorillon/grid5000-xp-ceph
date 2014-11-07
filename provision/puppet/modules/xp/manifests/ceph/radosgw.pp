@@ -1,7 +1,7 @@
 class xp::ceph::radosgw {
 
-  $monitor = hiera('ceph_monitor')
-  $monitor_short = inline_template("<%= @monitor.split('.').first %>")
+  $monitors = hiera_array('ceph_monitors')
+  $monitor_short = inline_template("<%= @monitors.first.split('.').first %>")
 
   package {
     ['apache2', 'libapache2-mod-fastcgi', 'openssl']:

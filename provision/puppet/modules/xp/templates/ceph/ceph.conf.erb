@@ -3,8 +3,13 @@
 
 [global]
     fsid = <%= @fsid %>
-    mon initial members = <%= @monitor.split('.').first %>
-    mon host = <%= Resolv.getaddress(@nodes.first) %>
+<% if @quorum -%>
+    mon initial members = <%= @monitors.select {|x| x.match(@site) }.map { |x| x.split('.').first }.join(',') %>
+    mon host = <%=  @monitors.select {|x| x.match(@site) }.map { |x| Resolv.getaddress(x) + ':6789' }.join(',') %>
+<% else -%>
+    mon initial members = <%= @monitors.map { |x| x.split('.').first }.first %>
+    mon host = <%=  @monitors.map { |x| Resolv.getaddress(x) + ':6789' }.first %>
+<% end -%>
     auth cluster required = cephx
     auth service required = cephx
     auth client required = cephx
@@ -48,23 +53,23 @@
 
 [mon]
     mon data = <%= @path %>/mon/mon_$id/data
-<% @ceph_description.each do |fqdn,desc| -%>
+<% @monitors.each do |fqdn| -%>
 [mon.<%= fqdn.split('.').first %>]
     host = <%= fqdn.split('.').first %>
-    mon addr = <%= Resolv.getaddress(fqdn) %>:6789
+    public addr = <%= Resolv.getaddress(fqdn) %>
 <% end -%>
 
 [mds]
     mds data = <%= @path %>/mds/ceph-$id
     keyring = <%= @path %>/mds/ceph-$id/keyring
-[mds.<%= @mds.split('.').first %>]
-    host = <%= @mds.split('.').first %>
+[mds.<%= @mds.first.split('.').first %>]
+    host = <%= @mds.first.split('.').first %>
 
-[client.radosgw.<%= @monitor.split('.').first %>]
-    host = <%= @monitor.split('.').first %>
+[client.radosgw.<%= @monitors.first.split('.').first %>]
+    host = <%= @monitors.first.split('.').first %>
     keyring = /etc/ceph/ceph.client.radosgw.keyring
-    rgw socket path = /var/run/ceph/ceph.radosgw.<%= @monitor.split('.').first %>.fastcgi.sock
+    rgw socket path = /var/run/ceph/ceph.radosgw.<%= @monitors.first.split('.').first %>.fastcgi.sock
     rgw data = <%= @path %>/radosgw/ceph-radosgw.gateway
-    log file = /var/log/ceph/client.radosgw.<%= @monitor.split('.').first %>.log
+    log file = /var/log/ceph/client.radosgw.<%= @monitors.first.split('.').first %>.log
     rgw ops log rados = true
     rgw enable ops log = true

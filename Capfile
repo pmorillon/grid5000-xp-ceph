@@ -129,9 +129,21 @@ role :ceph_monitor do
       nodes << xp.role_with_name("ceph_monitor_#{cluster['name']}").servers
     end
   end
-  # Fixme : manage multiple monitors
-  nodes.first
+  nodes.flatten!.first
 end
+
+role :ceph_monitors do
+  nodes = []
+  scenario.each do |site|
+    site['clusters'].each do |cluster|
+      nodes << xp.role_with_name("ceph_monitor_#{cluster['name']}").servers
+    end
+  end
+  # Fixme : manage multiple monitors
+  #nodes.first
+  nodes.flatten!
+end
+
 
 role :computes do
   nodes = []
@@ -139,6 +151,10 @@ role :computes do
     nodes << xp.role_with_name("computes_#{site['site']}").servers if site['computes']
   end
   nodes.flatten!
+end
+
+role :empty do
+  []
 end
 
 
@@ -152,9 +168,10 @@ before :start, "provision:hiera_generate"
 before :start, "provision:frontend"
 before :start, "vlan:set"
 before :start, "provision:all"
+before :start, "os:ntp"
 before :start, "provision:hiera_osd"
 before :start, "provision:create_osd"
-before :start, "umount_tmp"
+before :start, "os:umount_tmp"
 before :start, "provision:nodes"
 
 
@@ -271,12 +288,27 @@ namespace :provision do
     nodes.flatten!
     nodes.each do |node|
       File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-        file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon } }.to_yaml)
+        file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd } }.to_yaml)
       end
     end
     # Fixme: multiple monitor support
+    #serversForCapRoles("ceph_monitor").each do |monitor|
+      #File.open("provision/hiera/db/#{monitor}.yaml", "w") do |file|
+        #file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon } }.to_yaml)
+      #end
+    #end
     File.open("provision/hiera/db/#{serversForCapRoles("ceph_monitor").first}.yaml", "w") do |file|
-      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon xp::ceph::mds xp::ceph::radosgw } }.to_yaml)
+      file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon::initial xp::ceph::mds xp::ceph::radosgw } }.to_yaml)
+    end
+    synced = false
+  end
+
+  desc "Configure Hiera for secondary monitors"
+  task :hiera_mon do
+    serversForCapRoles("ceph_monitors")[1..-1].each do |monitor|
+      File.open("provision/hiera/db/#{monitor}.yaml", "w") do |file|
+        file.puts({ 'classes' => %w{ xp::nodes xp::ceph::osd xp::ceph::mon::others } }.to_yaml)
+      end
     end
     synced = false
   end
@@ -296,9 +328,13 @@ namespace :provision do
 
 end
 
+
+# Tasks for ceph cluster operations
+#
 namespace :ceph do
 
-  task :datacenter, :roles => :ceph_monitor do
+  desc 'Create geo map'
+  task :geo, :roles => :ceph_monitor do
     set :user, 'root'
     scenario.each do |site|
       run "ceph osd crush add-bucket #{site['site']} datacenter"
@@ -311,13 +347,43 @@ namespace :ceph do
     end
   end
 
+  desc 'Reweight OSDs'
   task :reweight, :roles => :ceph_nodes do
     set :user, 'root'
     run %{for i in $(ls /var/lib/ceph/osd); do ceph osd crush reweight osd.$(echo $i | cut -d'_' -f2) $(echo "scale=3;($(df /var/lib/ceph/osd/$i | grep osd | awk '{print $2;}')/(1024^3))" | bc); done}
   end
 
+  desc 'Configure Ceph in order to use the nearest monitors, need to have several monitors and a valid paxos quorum'
+  task :geo_mon do
+    xpconfig = YAML.load(File.read('provision/hiera/db/xp.yaml'))
+    xpconfig['quorum'] = true
+    File.open('provision/hiera/db/xp.yaml', 'w') do |file|
+      file.puts xpconfig.to_yaml
+    end
+  end
+
 end
 
+
+# Tasks for system coponents
+#
+namespace :os do
+
+  desc 'Fixes time issue'
+  task :ntp, :roles => :ceph_nodes do
+    set :user, 'root'
+    run "service ntp stop && ntpdate ntp && service ntp start"
+  end
+
+  # Task to umount /tmp on ceph nodes
+  #
+  desc "umount /tmp on"
+  task :umount_tmp, :roles => :ceph_nodes do
+    set :user, "root"
+    run "umount /tmp"
+  end
+
+end
 
 # Tasks for open a shell on nodes
 #
@@ -362,20 +428,12 @@ namespace :vlan do
 end
 
 
-# Task to umount /tmp on ceph nodes
-#
-desc "umount /tmp on"
-task :umount_tmp, :roles => :ceph_nodes do
-  set :user, "root"
-  run "umount /tmp"
-end
-
-
 # Task for commands
 #
 desc "run command on computes nodes (need CMD and ROLES, computes by default)"
-task :cmd, :roles => :computes do
+task :cmd, :roles => :empty do
   raise "Need CMD environment variable" unless ENV['CMD']
+  raise "Need ROLES environment variable" unless ENV['ROLES']
   set :user, 'root'
   run ENV['CMD']
 end
@@ -426,17 +484,18 @@ def generateHieraDatabase
 
   # Add experiment configuration into Hiera
   xpconfig = {
-    'frontend'                  => xp.role_with_name("frontend").servers.first,
-    'ceph_monitor'              => serversForCapRoles("ceph_monitor").first,
-    'ceph_mds'                  => serversForCapRoles("ceph_monitor").first,
-    'ceph_nodes'                => serversForCapRoles("ceph_nodes"),
-    'computes'                  => serversForCapRoles("computes"),
-    'vlan'                      => vlan,
+    'frontend'                   => xp.role_with_name("frontend").servers.first,
+    'ceph_monitors'              => serversForCapRoles("ceph_monitors"),
+    'ceph_mds'                   => serversForCapRoles("ceph_monitor"),
+    'ceph_nodes'                 => serversForCapRoles("ceph_nodes"),
+    'computes'                   => serversForCapRoles("computes"),
+    'vlan'                       => vlan,
     'cluster_network_interfaces' => cluster_network_interface,
-    'ceph_fsid'                 => '7D8EF28C-11AB-4532-830C-FC87A4C6A200',
-    'ceph_description'          => ceph_description,
-    'osd_count'                 => osd_id,
-    'fs'                        => 'ext4'
+    'ceph_fsid'                  => '7D8EF28C-11AB-4532-830C-FC87A4C6A200',
+    'ceph_description'           => ceph_description,
+    'osd_count'                  => osd_id,
+    'fs'                         => 'ext4',
+    'quorum'                     => false
   }
   FileUtils.mkdir('provision/hiera/db') if not Dir.exists?('provision/hiera/db')
   File.open('provision/hiera/db/xp.yaml', 'w') do |file|
@@ -448,8 +507,11 @@ def generateHieraDatabase
     site['clusters'].each do |cluster|
       serversForCapRoles("ceph_nodes").each do |node|
         File.open("provision/hiera/db/#{node}.yaml", 'w') do |file|
-          file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon } }.to_yaml)
+          file.puts({ 'classes' => %w{ xp::nodes } }.to_yaml)
         end
+      end
+      File.open("provision/hiera/db/#{serversForCapRoles("ceph_monitor").first}.yaml", 'w') do |file|
+        file.puts({ 'classes' => %w{ xp::nodes xp::ceph::mon::initial } }.to_yaml)
       end
     end
   end

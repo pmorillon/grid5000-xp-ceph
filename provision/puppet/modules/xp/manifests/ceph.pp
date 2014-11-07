@@ -11,12 +11,13 @@ class xp::ceph {
   $fs = hiera('fs')
   $fsid = hiera('ceph_fsid')
   $nodes = hiera_array('ceph_nodes')
-  $monitor = hiera('ceph_monitor')
+  $monitors = hiera_array('ceph_monitors')
   $mds = hiera('ceph_mds')
   $vlan_id = hiera('vlan')
   $cluster_network_interfaces = hiera('cluster_network_interfaces')
   $cluster_network_interface = $cluster_network_interfaces[$site]
   $path = '/var/lib/ceph'
+  $quorum = hiera('quorum')
 
   package {
     ['xfsprogs', 'parted', 'bc']:

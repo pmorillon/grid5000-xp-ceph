@@ -1,6 +1,6 @@
 class xp::ceph::mon {
 
-  include "xp::ceph"
+  include 'xp::ceph'
 
   $ceph_description = hiera_hash('ceph_description')
   $mon_device = $ceph_description[$fqdn]['mon']['device']
@@ -16,38 +16,28 @@ class xp::ceph::mon {
 
   file {
     "${xp::ceph::path}/mon/mon_${hostname}":
-      tag    => 'ceph_tree';
+      tag => 'ceph_tree';
     "${xp::ceph::path}/mon/mon_${hostname}/data":
-      tag     => 'ceph_tree';
+      tag => 'ceph_tree';
+    "${xp::ceph::path}/bootstrap-mon":
+      tag => 'ceph_tree';
+    "${xp::ceph::path}/bootstrap-mon/ceph-mon-keyring":
+      ensure  => file,
+      mode    => '0640',
+      owner   => root,
+      group   => root,
+      source  => "puppet://${puppetmaster}/xpfiles/ceph.mon.keyring",
+      before  => Exec['Populate the monitor daemon'],
+      require => [File['/etc/ceph/ceph.client.admin.keyring'], File['/etc/ceph/ceph.conf']];
   }
 
   exec {
-    'Generate monitor secret key':
-      command => "/usr/bin/ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'",
-      user    => root,
-      group   => root,
-      creates => '/tmp/ceph.mon.keyring',
-      notify  => Exec['Add client admin key to monitor key'],
-      require => [File['/etc/ceph/ceph.client.admin.keyring'], File['/etc/ceph/ceph.conf']];
-    'Add client admin key to monitor key':
-      command     => "/usr/bin/ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring",
-      user        => root,
-      group       => root,
-      refreshonly => true,
-      before      => Exec['Populate the monitor daemon'],
-      require     => File['/etc/ceph/ceph.client.admin.keyring'];
-    'Generate monitor map':
-      command => "/usr/bin/monmaptool --create --add ${hostname} ${ipaddress} --fsid ${fsid} /tmp/monmap",
-      user    => root,
-      group   => root,
-      creates => '/tmp/monmap',
-      require => File['/etc/ceph/ceph.conf'];
     'Populate the monitor daemon':
-      command => "/usr/bin/ceph-mon --mkfs -i ${hostname} --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring",
+      command => "/usr/bin/ceph-mon --mkfs -i ${hostname} --monmap ${xp::ceph::path}/bootstrap-mon/monmap --keyring ${xp::ceph::path}/bootstrap-mon/ceph-mon-keyring",
       user    => root,
       group   => root,
       creates => "${xp::ceph::path}/mon/mon_${hostname}/data/keyring",
-      require => [File["${xp::ceph::path}/mon/mon_${hostname}/data"], Exec['Generate monitor map'], Exec['Generate monitor secret key']];
+      require => [File["${xp::ceph::path}/mon/mon_${hostname}/data"], Exec['Generate monitor map'], File["${xp::ceph::path}/bootstrap-mon/ceph-mon-keyring"]];
   }
 
   unless $mon_device == 'sda' {

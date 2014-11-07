@@ -1,7 +1,7 @@
 # INSTALLED BY PUPPET
 # Template : 'xp/ceph/radosgw/apache/rgw.conf.erb'
 
-FastCgiExternalServer /var/www/s3gw.fcgi -socket /var/run/ceph/ceph.radosgw.<%= @monitor.split('.').first %>.fastcgi.sock
+FastCgiExternalServer /var/www/s3gw.fcgi -socket /var/run/ceph/ceph.radosgw.<%= @monitors.first.split('.').first %>.fastcgi.sock
 
 <VirtualHost *:443>
 
