@@ -6,11 +6,11 @@ computes: 1
 cluster_network_interface: false
 clusters:
   - name: 'paranoia'
-  ceph_nodes_count: 4
-  node_description:
-    mon: sda
-    osd:
-      - sdb
-      - sdc
-      - sdd
-      - sde
+    ceph_nodes_count: 4
+    node_description:
+      mon: sda
+      osd:
+        - sdb
+        - sdc
+        - sdd
+        - sde
