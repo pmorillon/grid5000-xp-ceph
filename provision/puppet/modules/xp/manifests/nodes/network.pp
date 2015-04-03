@@ -25,7 +25,7 @@ class xp::nodes::network {
         ensure => absent;
     }
 
-    File['/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name'] -> Augeas['eth2']
+    File['/etc/dhcp/dhclient-exit-hooks.d/g5k-update-host-name'] -> Augeas[$interface]
     Augeas[$interface] ~> Exec["/sbin/ifup ${interface}"]
 
   }

@@ -417,6 +417,7 @@ namespace :vlan do
         site['clusters'].each do |cluster|
           nodes << xp.role_with_name("ceph_nodes_#{cluster['name']}").servers.map { |node| node.gsub(/-(\d+)/, '-\1-' + site['cluster_network_interface']) }
         end
+        nodes.flatten!
         logger.info "Setting in vlan #{vlanid} following nodes : #{nodes.inspect}"
         root = xp.connection.root.sites[site['site'].to_sym]
         vlan = root.vlans.find { |item| item['uid'] == vlanid.to_s }
@@ -452,7 +453,7 @@ def generateHieraDatabase
 
   # Manage Vlan or not
   if (scenario.length == 1 and scenario.first['cluster_network_interface'])
-    vlan = xp.job_with_name("ceph_nodes")['resources_by_type']['vlans'].first
+    vlan = xp.job_with_name("xp5k_ceph_#{scenario.first['site']}")['resources_by_type']['vlans'].first
   else
     vlan = 0
   end
