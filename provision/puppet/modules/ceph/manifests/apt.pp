@@ -6,8 +6,8 @@ class ceph::apt (
 
   exec {
     'import_ceph_apt_key':
-      command     => "/usr/bin/wget -q 'http://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc' -O- | apt-key add -",
-      environment => "http_proxy=http://proxy:3128",
+      command     => "/usr/bin/wget --no-check-certificate -q 'http://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc' -O- | apt-key add -",
+      environment => ["http_proxy=http://proxy:3128","https_proxy=http://proxy:3128"],
       unless      => "/usr/bin/apt-key list | /bin/grep '${key}'";
     '/usr/bin/apt-get update':
       refreshonly => true;
