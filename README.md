@@ -186,6 +186,8 @@ See `scenarios/multisite.yaml`.
 ```shell
 cap start
 cap provision:nodes
+cap ceph:geo
+cap ceph:reweight
 ```
 
 ### Open a shell on the first node of the Ceph cluster
