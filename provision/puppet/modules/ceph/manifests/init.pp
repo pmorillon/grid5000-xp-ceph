@@ -1,9 +1,9 @@
 class ceph (
-  $version = 'emperor'
+  $version = 'firefly'
 ) {
 
   class {
-    'ceph::apt':
+    '::ceph::apt':
       version => $version;
   }
 

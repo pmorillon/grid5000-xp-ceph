@@ -2,8 +2,7 @@ class xp::ceph {
 
   class {
     '::ceph':
-      version => 'emperor';
-    #version => 'firefly';
+      version => 'firefly';
   }
 
   $ceph_description = hiera_hash('ceph_description')
