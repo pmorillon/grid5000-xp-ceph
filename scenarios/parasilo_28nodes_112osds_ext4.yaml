@@ -1,0 +1,16 @@
+---
+filesystem: ext4
+site: rennes
+frontend: true
+computes: 1
+cluster_network_interface: eth1
+clusters:
+  - name: 'parasilo'
+    ceph_nodes_count: 5
+    node_description:
+      mon: sda
+      osd:
+        - sdb
+        - sdc
+        - sdd
+        - sde
